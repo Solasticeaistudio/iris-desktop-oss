@@ -1,0 +1,56 @@
+# Public release audit
+
+Evidence recorded on 2026-08-12 for IRIS OSS v0.1.0. Publication, tagging, and commits were not performed.
+
+| Gate | Status | Evidence |
+| --- | --- | --- |
+| Canonical IRIS integrity | PASS | Scoped canonical status remained the same 39 entries; branch `feat/mnemosyne-memory-benchmark-v0.2` and HEAD `30e7f578ecfccefccf45678bbff6571986eade01` are unchanged. |
+| Tauri application-command ACL | PASS | `build.rs` declares all 79 registered commands through `AppManifest::commands`; main uses `allow-main-commands`; generated ACL compiles in release mode. The added launch command is narrowly allowlisted and creates no control session. |
+| Auxiliary-window least privilege | PASS | Canvas receives only core event/window access; annotation receives only `get_annotations`/`clear_annotations`; grid calibrator receives only `hide_grid_calibrator`; none receives main command access. Behavioral/static ACL test passes. |
+| Provider credential/origin binding | PASS | Renderer model request has no base URL, model, or credential. Rust loads `IRIS_BASE_URL`, `IRIS_MODEL`, and `IRIS_API_KEY` together, validates URL semantics, requires remote HTTPS, and allows HTTP only on localhost/127.0.0.1. Rust and Node tests pass. |
+| Cross-origin auth redirect defense | PASS | Native reqwest client uses `Policy::none`; provider redirects, including cross-origin redirects, are rejected before any follow-up request. |
+| Terminal composition defense | PASS | Command prompt, PowerShell, pwsh, Windows Terminal, Git Bash, Bash, and WSL aliases are absent from the launch allowlist; all ten rejection cases pass. |
+| Computer-control authorization | PASS | Mouse, keyboard, focus, scrolling, and drag implementations remain private. Sessions last at most 120 seconds and bind one existing HWND, PID, and executable; app launch grants no input authority. Rust behavioral tests cover same-target success, cross-app denial, expiry, exit, identity reuse, and coordinate containment. |
+| GUI authority semantics documented | PASS | README, `docs/SECURITY_MODEL.md`, `docs/THREAT_MODEL.md`, and `docs/TOOLS.md` state that target binding constrains where IRIS acts, not the semantic consequence of every target-application UI action. |
+| Native vs GUI authority distinction | PASS | Documentation separates native IRIS capabilities governed directly by Rust policy from temporary, target-bound GUI interaction governed by HWND/PID/executable and foreground validation. |
+| Integrated-terminal limitation documented | PASS | Visual Studio Code, Cursor, and other IDE/editor integrated terminals, consoles, extensions, and similar application-local surfaces are documented as residual semantic risk; direct terminal targets remain blocked. |
+| Control dialog wording accurate | PASS | Native dialog names the application/window/PID/HWND and duration, states the scope is this window, preserves separate direct-native protections, and warns that the application's own interface may expose consequential behavior. |
+| Target-bound security claims precise | PASS | No documentation claims target binding guarantees harmless application behavior; the dialog and threat model use the distinction `target binding ≠ semantic harmlessness`. |
+| Control-session target binding | PASS | Approval resolves and displays the exact application, title, PID, and HWND. Every action re-reads HWND/PID/executable; mismatches fail with `CONTROL_SESSION_TARGET_MISMATCH` and invalidate the session. |
+| Existing terminal control defense | PASS | Session creation rejects cmd, PowerShell, pwsh, Windows Terminal, wt, Bash, WSL, Git Bash, and mintty executable identities plus defensive friendly-title matches. Native behavioral test covers all listed identities. |
+| Foreground input validation | PASS | Type, key, key-combo, scroll, mouse, and drag require the approved foreground identity. Focus can target only the already approved window; another window returns `NEW_CONTROL_AUTHORIZATION_REQUIRED`. |
+| Mouse target containment | PASS | Move, click, double-click, right-click, and both high-risk drag endpoints must fall within the current approved window bounds; boundary behavioral test passes. |
+| Control-session expiry | PASS | Expiry is enforced natively at 120 seconds; expired-session behavioral test passes. |
+| Target-exit invalidation | PASS | Missing window/process observations fail closed and remove the native session. Target-exit and PID/HWND/executable-reuse tests pass. |
+| Sensitive file read policy | PASS | `read_file` is High risk and private; an exact request/path receives native validation and a bound single-use approval before reading. Traversal/wildcard/symlink tests pass. |
+| Clipboard privacy policy | PASS | Automatic clipboard monitor/toast removed. Clipboard reads are private High-risk operations with per-read approval; clipboard content is not logged. |
+| Legacy text action execution removed | PASS | Text-response parser/executor and call sites were removed. Regression test confirms command-looking text is returned unchanged and executes zero tools. |
+| Persisted-name containment | PASS | Shared Rust validator covers notes, workspaces, layouts, and macros; separators, traversal, absolute/UNC paths, reserved devices, and >80-character names fail. Unicode and normal-name containment tests pass. |
+| Reactive sphere retained | PASS | `IrisParticles.tsx` retains procedural sphere/ring/scatter/converge behavior, state colors, rainbow thinking ripple, microphone response, IRIS speech response, pulsing, rotation, success, and error states. Two deterministic identity tests and production build pass. |
+| Alternate IRIS identities removed | PASS | Animated character component, model/form selection/morphing code, manifest, model loaders, and Holopoint model view/window/command were removed. Final `mew`, `chibi`, and `baymax` source scan has zero hits. |
+| Built-in GLB/GLTF/STL assets | PASS | Final public source counts: GLB 0, GLTF 0, STL 0. Three.js is retained for the procedural sphere. |
+| MediaPipe JS/WASM consistency | PASS | Package and lockfile pin `@mediapipe/tasks-vision` 0.10.35 exactly. The deterministic preparation script refuses package/installed-version mismatch and records 0.10.35 in the generated asset manifest. |
+| MediaPipe runtime asset availability | PASS | `npm ci`/postinstall and prebuild copy all six WASM loader/runtime files from the installed package to `public/mediapipe/wasm`; focused Node test verifies every manifest entry. |
+| MediaPipe clean-copy initialization | PASS | Clean-copy `npm ci` reproduces the local WASM set from the lockfile before build/tests; no jsDelivr runtime URL remains. Task model files remain on the explicitly documented Google Storage origin. |
+| CSP after MediaPipe changes | PASS | `default-src 'self'`; `script-src 'self'`; no jsDelivr, `unsafe-eval`, object, form, or broad wildcard source. `connect-src` retains only self/Tauri IPC and `https://storage.googleapis.com` for face/hand task models. |
+| Reactive sphere regression | PASS | Procedural identity tests cover all six states and both user/IRIS audio color inputs. Production build transforms `IrisParticles` without GLB/GLTF/STL assets. |
+| Native destructive policy | PASS | Dangerous implementations and raw input implementations are absent from direct renderer IPC. Exact native approval binding, expiry, denial, mismatch, and replay tests pass. |
+| Agent tool-result loop | PASS | Sequential provider-neutral tool messages preserve call IDs; limits are 8 rounds, 4 calls/round, 3 consecutive failures, 120 seconds, plus cancellation. Eleven agent-loop/integration tests pass. |
+| PowerShell injection audit | PASS | Runtime strings are passed as environment data to fixed scripts; hostile quote/subexpression/metacharacter test confirms data never appears in command arguments. |
+| Raw HTML/SVG handling | PASS | Production code has no `dangerouslySetInnerHTML` or `srcDoc`; model Mermaid/SVG/HTML is inert source. |
+| Secret scan | PASS | `rg` scans for provider/cloud/GitHub keys, private keys, bearer credentials, passwords, tokens, database URLs, environment files, logs, DBs, paths, email, and phone patterns. Hits were placeholders, variable names, lockfile checksums, and intentional secret-detection regexes; no credential or personal data found. |
+| Network exposure | PASS | Listener scan found no inbound TCP/WebSocket/HTTP server or `0.0.0.0` binding. Runtime inbound listeners: none. Outbound traffic is native model HTTP plus pinned MediaPipe/model resources. |
+| Private runtime dependencies | PASS | Remaining Solstice references are attribution, package identifiers, historical hook names, and explicit boundary documentation. No Solstice endpoint, relay, companion server, managed OAuth, Lethe, Mnemosyne, SIMA, or Artemis runtime requirement exists. |
+| npm dependency audit | PASS | Final full `npm audit` result: 0 critical, 0 high, 0 moderate, 0 low; clean install audited 363 packages. |
+| Cargo dependency audit | REVIEW | `cargo-audit` is not installed. Cargo lockfile compiled in check, test, Clippy, and release profiles; manual advisory scan was not a substitute for `cargo audit`. This is a manual review item, not a known exploitable blocker. |
+| Generated Tauri permission artifacts | PASS | `src-tauri/permissions/autogenerated/` contains only Tauri-generated files, is ignored by `.gitignore`, and was regenerated during the successful `npm run tauri:build`. Manual `main.toml`, `annotation.toml`, and `grid-calibrator.toml` remain source definitions. |
+| Public Git-tree hygiene | PASS | Git inventory and ignore rules exclude dependencies, build output, generated MediaPipe WASM, generated Tauri permission output, installers, logs, `.env`, and local data. No unexpected generated/private files are included in the public source set. |
+| Frontend build/lint/tests | PASS | Build: 2,980 modules, zero errors. ESLint exits 0 with 80 pre-existing warnings. Tests: 27 passed, 0 failed, including five focused surgical-hardening checks. |
+| Rust format/test/Clippy | PASS | `cargo fmt --check` passed. Rust tests: 19 passed, 0 failed, including seven control-session behaviors. Standard Clippy passed with 35 warnings; strict `-D warnings` is not configured. |
+| Tauri build | PASS | Release build produced v0.1.0 MSI and NSIS installers with locally prepared MediaPipe 0.10.35 assets; generated binaries and target output were removed from the public source tree afterward. |
+| Clean-copy verification | PASS | Fresh external copy completed `npm ci` (which recreated all six MediaPipe WASM files), frontend build, all 27 Node tests, and all 19 Rust tests. Canonical/private path scan returned zero runtime hits. |
+| Source cleanup | PASS | Current public Git inventory and cleaned working tree contain 101 non-ignored OSS files / 1,582,892 bytes after removing dependencies, build output, generated MediaPipe assets, and generated Tauri ACL/schema output; those artifacts remain ignored and reproducible. |
+
+Known non-blocking quality debt: Vite reports a large 1.58 MB main chunk; ESLint reports 80 legacy warnings; Clippy reports 36 style warnings; `cargo-audit` remains a manual prerequisite.
+
+Known publication blockers: NONE.

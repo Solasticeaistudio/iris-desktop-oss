@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-annotation-commands"
+description = "Read and clear the in-memory annotation layer."
+commands.allow = ["get_annotations", "clear_annotations"]

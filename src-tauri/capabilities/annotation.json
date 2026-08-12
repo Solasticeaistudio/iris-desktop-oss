@@ -1,0 +1,14 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "annotation",
+  "description": "Annotation overlay access only",
+  "windows": ["annotation"],
+  "permissions": [
+    "allow-annotation-commands",
+    "core:event:allow-listen",
+    "core:event:allow-emit",
+    "core:window:allow-show",
+    "core:window:allow-hide",
+    "core:window:allow-is-visible"
+  ]
+}

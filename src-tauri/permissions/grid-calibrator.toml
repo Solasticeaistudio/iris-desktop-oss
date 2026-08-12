@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-grid-calibrator-commands"
+description = "Permit the calibrator to dismiss only its own window."
+commands.allow = ["hide_grid_calibrator"]

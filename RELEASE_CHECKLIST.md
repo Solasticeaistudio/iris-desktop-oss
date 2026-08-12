@@ -1,0 +1,21 @@
+# IRIS Desktop v0.2.0 release checklist
+
+- [ ] Review README
+- [ ] Review SECURITY.md
+- [ ] Review threat model
+- [ ] Review Apache-2.0 licensing
+- [ ] Review NOTICE
+- [ ] Review trademark language
+- [ ] Inspect secret-scan findings
+- [ ] Inspect private-infrastructure scan
+- [ ] Inspect network exposure
+- [ ] Inspect dependency licenses
+- [ ] Test fresh setup on a clean machine
+- [ ] Choose GitHub organization/repository
+- [ ] Replace the publication repository URL placeholder
+- [ ] Inspect screenshots/assets
+- [ ] Create public repository
+- [ ] Run `cargo audit` (manual while the tool is unavailable locally)
+- [ ] Create v0.2.0 tag
+- [ ] Publish release
+- [ ] Announce project
