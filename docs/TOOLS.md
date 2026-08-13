@@ -33,7 +33,7 @@ For a high/critical tool, add its schema and risk to the Rust guarded dispatcher
 
 Mouse, keyboard, focus, and scrolling belong to a native target-bound computer-control dispatcher. A session authorizes one existing PID/HWND/executable for at most 120 seconds; another application requires another authorization. Keyboard/scroll actions require the approved foreground target, mouse coordinates remain inside its bounds, and terminals are never eligible. Allowlisted launching does not itself grant input control. A control session is not approval for a sensitive, destructive, external-communication, or shell operation. It restricts where IRIS may perform GUI interaction, but cannot universally determine the semantic effect of every control exposed by the target application; IDEs such as Visual Studio Code and Cursor may contain integrated terminals, consoles, extensions, or other powerful local interfaces. File and clipboard reads must be classified for privacy impact because their results can be returned to a remote model provider.
 
-## v0.1 composition and privacy audit
+## Built-in composition and privacy audit
 
 | Tool | Previous risk | Current risk | Native requirement |
 | --- | --- | --- | --- |

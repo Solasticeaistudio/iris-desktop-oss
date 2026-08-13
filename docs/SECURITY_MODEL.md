@@ -57,15 +57,18 @@ GUI authority is temporary and scoped to an explicitly authorized application wi
 - A control session restricts the application/window IRIS may manipulate; it is not a guarantee that every application-local effect is harmless. Visual Studio Code, Cursor, and other IDEs/editors may contain integrated terminals, debug consoles, extension systems, Git controls, or remote-development surfaces. Direct terminal/shell targets remain prohibited, but an application-local terminal or equivalent control is a residual semantic risk that target binding cannot universally infer.
 - Arbitrary file and clipboard reads are privacy-sensitive high-risk tools. Each requires an exact, single-use approval. Automatic clipboard polling is disabled and clipboard values are not audited.
 - Provider endpoint, model, and credential are loaded together from native environment configuration. Remote credentials require HTTPS, localhost HTTP is narrowly allowed, and redirects are disabled.
+- Voice API credentials are stored in the OS credential vault or loaded from native environment configuration. The renderer can replace or clear an OS-vault entry but cannot retrieve it. OpenAI and ElevenLabs voice requests use fixed HTTPS origins, do not follow redirects, and have bounded request/response sizes.
+- Voice grants no additional authority. Tap-to-talk and cloud-wake transcripts enter the same message, ToolRegistry, native-policy, and approval path as typed input. Cloud wake is opt-in and discloses that detected utterances leave the machine and may incur provider usage.
+- Reasoning credentials are stored in Windows Credential Manager or loaded from environment fallback. Gemini and OpenAI presets have fixed native origins. A custom credential is bound to the full normalized base URL; an environment key is never inherited by an app-configured custom endpoint. Redirects are disabled and provider responses are bounded before parsing.
 - PowerShell scripts are fixed source. Runtime text is passed as environment data; typing uses the native input library instead of PowerShell.
-- Provider-generated Mermaid, SVG, and HTML are displayed as inert source in v0.1. CSP blocks eval, objects, forms, and arbitrary origins.
+- Provider-generated Mermaid, SVG, and HTML are displayed as inert source in v0.2.0. CSP blocks eval, objects, forms, and arbitrary origins.
 - CSP permits inline styles because the React animation/layout code emits style attributes; it does not permit inline scripts, `unsafe-eval`, or remote script origins. MediaPipe 0.10.35 WASM is copied from the exactly pinned installed package during `npm ci` and loaded locally. Only its face/hand task models use the narrowly allowed `https://storage.googleapis.com` renderer connection origin; model-provider traffic remains native.
 - Filesystem paths must be absolute, existing, non-wildcard paths without parent traversal; symlink targets are rejected for destructive operations.
 - Arbitrary shell execution is not registered or exposed as a Tauri command.
 - Application launching uses an allowlist that excludes command prompts, PowerShell, Windows Terminal, Git Bash, Bash, WSL, and unknown names.
 - URLs are restricted to credential-free HTTP(S) URLs before opening.
 - Audit records contain sanitized arguments and outcomes, not API keys or passwords.
-- No remote control or remote approval listener starts in v0.1.
+- No remote control or remote approval listener starts in v0.2.0.
 
 ## Limitations
 

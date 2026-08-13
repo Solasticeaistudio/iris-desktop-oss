@@ -1,6 +1,6 @@
 # Open-source boundary
 
-IRIS OSS v0.1 contains the local desktop-agent runtime: perception primitives, native computer control, structured tools, local policy and approval, local continuity, and provider integration.
+IRIS OSS v0.2.0 contains the local desktop-agent runtime: perception primitives, native computer control, structured tools, local policy and approval, local continuity, and provider integration.
 
 The application does not require Solstice-hosted intelligence, hosted memory, managed OAuth, commercial connectors, cloud relay, fleet management, or a mobile companion. Those capabilities may exist in other Solstice products, but they are not runtime prerequisites here.
 

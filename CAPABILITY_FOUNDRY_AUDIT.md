@@ -66,14 +66,14 @@ Generated tool names use `foundry_<origin>_<operation>`, lowercase provider-safe
 
 ## Validation results
 
-- `npm ci`: PASS — 362 packages installed; 363 audited; MediaPipe 0.10.35 regenerated.
-- `npm run build`: PASS — 2,982 modules.
-- `npm run lint`: PASS — zero errors; 82 pre-existing warnings.
-- `npm test`: PASS — 31/31.
-- `npm audit`: PASS — 0 vulnerabilities across 449 dependency records.
+- `npm ci`: PASS — 361 packages added; 362 audited; MediaPipe 0.10.35 regenerated.
+- `npm run build`: PASS — 2,987 modules.
+- `npm run lint`: PASS — zero errors; 81 warning-debt findings.
+- `npm test`: PASS — 52/52, including Foundry, voice, reasoning, and documentation regressions.
+- `npm audit`: PASS — 0 vulnerabilities.
 - `cargo fmt --check`: PASS.
 - `cargo clippy --all-targets --all-features`: PASS; warning debt is pre-existing IRIS code.
-- `cargo test --all-targets --all-features`: PASS — 63/63.
+- `cargo test`: PASS — 69 unit and 6 Foundry integration tests; 0 failed.
 - Foundry behavioral tests: PASS — 48/48; existing IRIS regressions: PASS — 46/46.
 - `npm run tauri:build`: PASS — v0.2.0 application, MSI, and NSIS built for validation only.
 - Rust dependency remediation: PASS — Tauri 2.11.5 and targeted parent/transitive updates remove all known RustSec vulnerability findings from the locked graph.

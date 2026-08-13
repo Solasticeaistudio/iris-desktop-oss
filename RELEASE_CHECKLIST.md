@@ -1,6 +1,9 @@
 # IRIS Desktop v0.2.0 release checklist
 
-- [ ] Review README
+- [x] Review README
+- [ ] Review getting-started guide on a clean Windows account
+- [x] Review capability and configuration documentation
+- [x] Verify all internal documentation links
 - [ ] Review SECURITY.md
 - [ ] Review threat model
 - [ ] Review Apache-2.0 licensing
@@ -11,11 +14,15 @@
 - [ ] Inspect network exposure
 - [ ] Inspect dependency licenses
 - [ ] Test fresh setup on a clean machine
-- [ ] Choose GitHub organization/repository
-- [ ] Replace the publication repository URL placeholder
+- [x] Choose GitHub organization/repository
+- [x] Replace the publication repository URL placeholder
 - [ ] Inspect screenshots/assets
-- [ ] Create public repository
+- [x] Create public repository
 - [x] Run `cargo audit` 0.22.2 — zero known vulnerabilities after Rust dependency remediation; review informational warnings in the release audit
+- [ ] Smoke-test Gemini reasoning and structured tool calls with a user-owned key
+- [ ] Smoke-test ElevenLabs transcription and speech output with a user-owned key
+- [ ] Push the final candidate and verify GitHub Actions/Dependabot on its exact commit
+- [ ] Verify a clean clone and exact-commit source artifact
 - [ ] Create v0.2.0 tag
 - [ ] Publish release
 - [ ] Announce project

@@ -1,6 +1,32 @@
 # Public release audit
 
-Evidence recorded on 2026-08-12 for IRIS OSS v0.1.0. Publication, tagging, and commits were not performed.
+## IRIS OSS v0.2.0 candidate update — 2026-08-13
+
+This section supplements the original hardening record below. It covers the current voice-first interaction, in-app reasoning configuration, secure credential storage, and user-documentation candidate before live provider smoke testing and CI on the final commit.
+
+| Gate | Status | Evidence |
+| --- | --- | --- |
+| Voice implementation | PASS | Native bounded microphone capture, VAD/AEC, OpenAI/ElevenLabs STT, system/OpenAI/ElevenLabs TTS, tap-to-talk default, opt-in cloud wake phrase, and same-path typed/voice policy tests. |
+| Reasoning configuration | PASS | In-app mock/Gemini/OpenAI/custom configuration, fixed native Gemini/OpenAI origins, hash-bound custom credentials, Windows Credential Manager storage, no renderer credential readback, and live provider refresh. |
+| OpenAI-compatible response handling | PASS | Behavioral tests cover `choices[0].message`, structured tool calls, and malformed arguments failing closed before registry schema validation. |
+| Voice/reasoning ACL | PASS | New native commands are present only in the primary-window application permission; auxiliary windows receive no provider or credential authority. |
+| Documentation | PASS | Getting-started, capabilities, configuration, voice, reasoning, and troubleshooting guides are linked from README. Automated validation checks required guides, launch commands, and relative links; all 23 Markdown files have zero broken relative links. |
+| Frontend build/lint/tests | PASS | Production build transforms 2,987 modules. ESLint exits zero with 81 warning-debt findings. Node suite: 52 passed, 0 failed. |
+| Rust format/Clippy/tests | PASS | `cargo fmt --check` and standard Clippy pass. Rust: 69 unit plus 6 Foundry integration tests passed, 0 failed. |
+| Dependency audit | PASS | `npm audit`: 0 vulnerabilities. `cargo audit` 0.22.2: 0 known vulnerabilities, 18 unmaintained warnings, 3 unsound informational warnings, and 0 yanked packages. |
+| Windows package build | PASS | `npm run tauri:build` produced the v0.2.0 release executable, MSI, and NSIS locally; generated output remains ignored and unpublished. |
+| Secret/private-runtime scan | PASS | Credential-pattern hits are empty environment examples or documented placeholders. No private Solstice runtime path or service dependency was introduced. |
+| Gemini live reasoning | PENDING | Requires a user-owned Gemini key and account quota. Do not mark passed from static or mock-provider tests. |
+| ElevenLabs live STT/TTS | PENDING | Requires a user-owned ElevenLabs key, permitted voice, and account quota. Do not mark passed from static tests. |
+| OpenAI live provider | NOT RUN | No account credits are currently available. This is not required when Gemini reasoning and ElevenLabs voice are validated and OpenAI remains an optional provider. |
+| Final immutable commit and CI | PENDING | The voice/reasoning and documentation changes must be committed, pushed, and pass GitHub Actions and Dependabot review before tagging. |
+| Exact-commit source artifact | PENDING | Create only after final smoke tests and green CI. |
+
+Current publication blockers: live Gemini reasoning smoke test, live ElevenLabs STT/TTS smoke test, final-commit CI, and exact-commit clean-copy/source-artifact verification.
+
+## Historical OSS hardening evidence — 2026-08-12
+
+The following table preserves the initial source-hardening evidence recorded before the v0.2.0 voice/reasoning candidate. Later results above supersede old counts and version labels where they differ.
 
 | Gate | Status | Evidence |
 | --- | --- | --- |
@@ -51,6 +77,6 @@ Evidence recorded on 2026-08-12 for IRIS OSS v0.1.0. Publication, tagging, and c
 | Clean-copy verification | PASS | Fresh external copy completed `npm ci` (which recreated all six MediaPipe WASM files), frontend build, all 27 Node tests, and all 19 Rust tests. Canonical/private path scan returned zero runtime hits. |
 | Source cleanup | PASS | Current public Git inventory and cleaned working tree contain 101 non-ignored OSS files / 1,582,892 bytes after removing dependencies, build output, generated MediaPipe assets, and generated Tauri ACL/schema output; those artifacts remain ignored and reproducible. |
 
-Known non-blocking quality debt: Vite reports a large 1.58 MB main chunk; ESLint reports 80 legacy warnings; Clippy reports 36 style warnings; `cargo-audit` remains a manual prerequisite.
+Historical non-blocking quality debt at the time of this table: Vite reported a large 1.58 MB main chunk, ESLint reported 80 legacy warnings, and Clippy reported 36 style warnings. The current cargo-audit result is recorded in the v0.2.0 candidate update above.
 
-Known publication blockers: NONE.
+Historical publication blockers for that hardening pass: none. Use the current candidate blockers above for release decisions.

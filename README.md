@@ -17,11 +17,28 @@ IRIS is represented by the procedural reactive particle sphere in `src/component
 - React/TypeScript desktop interface in a Tauri shell
 - Rust native runtime for screen capture, monitor awareness, windows, input, clipboard, applications, workspaces, macros, and local state
 - A model-provider boundary with a deterministic offline mock and configurable OpenAI-compatible HTTP provider
+- In-app Gemini, OpenAI, and custom/local reasoning configuration with OS-vault credentials
 - Structured tool schemas, argument validation, risk metadata, approval gates, and local audit records
-- Local browser speech recognition/synthesis where the host browser supports it
+- Native microphone capture with VAD/AEC, configurable OpenAI or ElevenLabs speech-to-text, and system/OpenAI/ElevenLabs speech output
 - Local workspaces, macro storage, annotations, and history
 
 The application does not require a Solstice-hosted service. Email, calendar, hosted memory, cloud relay, mobile companion control, and arbitrary shell execution are outside the v0.2.0 boundary.
+
+## Start here
+
+- **New user:** [Getting started](docs/GETTING_STARTED.md)
+- **What IRIS can do:** [Capabilities](docs/CAPABILITIES.md)
+- **Providers, API keys, and local data:** [Configuration](docs/CONFIGURATION.md)
+- **Something is not working:** [Troubleshooting](docs/TROUBLESHOOTING.md)
+- **All documentation:** [Documentation index](docs/README.md)
+
+## Voice-first interaction
+
+IRIS is designed as a conversational, voice-first desktop assistant. Native Rust audio capture performs microphone selection, voice activity detection, bounded utterance recording, and echo-reference handling. Transcription is performed by a provider selected in Settings: OpenAI (`whisper-1`, `gpt-4o-mini-transcribe`, or `gpt-4o-transcribe`) or ElevenLabs Scribe. Speech output can use an installed Windows system voice, OpenAI TTS, or an ElevenLabs/custom voice ID.
+
+Tap-to-talk is the safe default: click the microphone, speak one utterance, and IRIS returns to standby. Cloud wake-word mode is opt-in because each detected utterance must be sent to the configured transcription provider before the wake phrase can be recognized, which can expose ambient speech and consume provider credits. A local wake-word model is not bundled in v0.2.0.
+
+Voice credentials are stored in Windows Credential Manager and cannot be read back by the renderer. Environment variables are supported for source builds. Provider destinations are fixed in Rust, authenticated redirects are disabled, responses are bounded, and voice transcripts enter the same agent/tool/approval path as typed messages. See [docs/VOICE.md](docs/VOICE.md).
 
 ## Capability Foundry
 
@@ -60,15 +77,15 @@ flowchart TD
 - Rust 1.92.0 with the platform prerequisites listed in the [Tauri prerequisites guide](https://v2.tauri.app/start/prerequisites/)
 - WebView2 and the Windows native build prerequisites required by Tauri
 
-Clone the repository and install the frontend dependencies:
+Clone the repository and install the exact locked frontend dependencies:
 
 ```bash
 git clone https://github.com/Solasticeaistudio/iris-desktop-oss.git
 cd iris-desktop-oss
-npm install
+npm ci
 ```
 
-Copy `.env.example` to `.env`, then choose `mock` for an offline run or configure an OpenAI-compatible provider. Start the desktop application:
+Start the desktop application, then use **Settings → Reasoning provider** to choose Gemini, OpenAI, a custom/local OpenAI-compatible provider, or the offline mock. Environment configuration remains available for source-build automation:
 
 ```bash
 npm run tauri:dev
@@ -88,13 +105,15 @@ On Windows PowerShell, the equivalent clean start is:
 
 ```powershell
 Copy-Item .env.example .env
-npm install
+npm ci
 npm run tauri:dev
 ```
 
+For a guided first launch, provider setup, voice setup, screen test, and native approval walkthrough, follow [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md).
+
 ## Model configuration
 
-The default provider is offline and deterministic:
+The default provider is offline and deterministic. Windows users should normally configure reasoning in the app, where credentials are stored in Windows Credential Manager:
 
 ```env
 IRIS_MODEL_PROVIDER=mock
@@ -113,6 +132,10 @@ IRIS_MODEL=your-model
 ```
 
 `IRIS_BASE_URL`, `IRIS_MODEL`, and `IRIS_API_KEY` are loaded together by the Rust runtime. The renderer cannot supply or replace the destination that receives the credential. Credentialed remote endpoints require HTTPS; explicit `http://localhost:<port>` and `http://127.0.0.1:<port>` endpoints are allowed for local inference. Redirects are disabled for provider requests so authorization headers cannot cross origins. Never commit `.env` or place credentials in documentation, tests, or screenshots.
+
+Gemini and OpenAI presets use fixed native API origins. Custom-provider credentials are bound to a fingerprint of the complete configured base URL, and environment credentials cannot migrate to an app-configured custom endpoint. See [docs/REASONING_PROVIDERS.md](docs/REASONING_PROVIDERS.md).
+
+Optional voice provider environment variables are `IRIS_OPENAI_API_KEY` and `IRIS_ELEVENLABS_API_KEY`. The standard `OPENAI_API_KEY` and `ELEVENLABS_API_KEY` names are accepted as fallbacks. The in-app Voice settings are preferred on Windows because they store credentials in the OS vault.
 
 See [docs/PROVIDERS.md](docs/PROVIDERS.md) for the provider contract.
 
