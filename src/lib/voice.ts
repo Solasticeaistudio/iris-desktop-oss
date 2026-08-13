@@ -56,6 +56,21 @@ export const DEFAULT_VOICE_SETTINGS: VoiceSettings = {
   wakeWords: ['hey iris', 'iris'],
 };
 
+export function isVoiceInputReady(status: VoiceStatus): boolean {
+  switch (status.settings.sttProvider) {
+    case 'openai':
+      return status.openai.configured;
+    case 'elevenlabs':
+      return status.elevenlabs.configured;
+    default:
+      return false;
+  }
+}
+
+export function shouldSpeakVoiceReplies(settings: VoiceSettings): boolean {
+  return settings.ttsProvider !== 'disabled';
+}
+
 interface ActiveAudioPlayback {
   audio: HTMLAudioElement;
   finish: (error?: Error) => void;

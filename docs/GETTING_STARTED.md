@@ -95,8 +95,9 @@ In **Settings → Voice**:
 1. Select a microphone.
 2. Choose OpenAI or ElevenLabs for speech-to-text and save that provider's key.
 3. Choose Windows system speech, OpenAI, or ElevenLabs for speech output.
-4. Leave **Tap to talk** selected for the first test.
-5. Close Settings, click the microphone, speak one sentence, and wait for transcription.
+4. Click **Save voice settings**. Saving a key alone does not activate the selected provider.
+5. Confirm the status reads **Listening: ready** and leave **Tap to talk** selected for the first test.
+6. Close Settings, click the microphone, speak one sentence, and wait for transcription.
 
 Voice input enters the same reasoning, tool, and approval path as typed input. Cloud wake-word mode is optional and sends detected utterances to the selected transcription service, which can consume credits and expose ambient speech. See [Voice](VOICE.md).
 

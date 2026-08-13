@@ -53,8 +53,10 @@ The Test action checks the OpenAI-compatible `/models` route. A custom server th
 1. Confirm Windows **Settings → Privacy & security → Microphone** permits desktop apps.
 2. Select the correct microphone in IRIS Settings.
 3. Confirm the STT provider key is configured separately from the reasoning key.
-4. Use tap-to-talk, speak clearly for at least a short sentence, and wait for the utterance to end.
-5. Check provider quota and networking.
+4. Click **Save voice settings** after choosing the STT provider; saving a credential alone does not activate it.
+5. Confirm the Voice panel says **Listening: ready**.
+6. Use tap-to-talk, speak clearly for at least a short sentence, and wait for the utterance to end.
+7. Check provider quota and networking.
 
 Tap-to-talk returns to standby after one utterance. Cloud wake-word mode requires continuous native listening and cloud transcription of detected utterances.
 
@@ -65,6 +67,8 @@ Tap-to-talk returns to standby after one utterance. Cloud wake-word mode require
 - For OpenAI/ElevenLabs, save the TTS provider key in Voice settings.
 - For ElevenLabs, confirm the voice ID belongs to the account and the key has text-to-speech permission.
 - Check Windows output device and volume.
+
+Listening and spoken replies are independent. Tap-to-talk returns the microphone to standby after one utterance, but IRIS still speaks reasoning responses whenever **Spoken replies** is not set to **Silent**.
 
 Paid TTS failure may fall back to system speech.
 

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { KeyRound, Save, ShieldCheck, Trash2, Volume2 } from 'lucide-react';
 import {
   clearVoiceCredential,
+  isVoiceInputReady,
   playSpeechResponse,
   saveVoiceSettings,
   setVoiceCredential,
@@ -46,6 +47,8 @@ export function VoiceSettingsPanel({ status, onStatusChange, lastError }: VoiceS
       elevenlabs: providers.has('elevenlabs'),
     };
   }, [draft.sttProvider, draft.ttsProvider]);
+  const inputReady = isVoiceInputReady({ ...status, settings: draft });
+  const hasUnsavedSettings = JSON.stringify(draft) !== JSON.stringify(status.settings);
 
   const update = <K extends keyof VoiceSettings>(key: K, value: VoiceSettings[K]) =>
     setDraft((current) => ({ ...current, [key]: value }));
@@ -100,6 +103,15 @@ export function VoiceSettingsPanel({ status, onStatusChange, lastError }: VoiceS
           <div className="text-[10px] text-white/35">Native capture · governed agent path · protected credentials</div>
         </div>
         <ShieldCheck size={16} className={status.secureStorageAvailable ? 'text-emerald-400' : 'text-amber-400'} />
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 text-[9px]">
+        <div className={`rounded border px-2 py-1 ${inputReady ? 'border-emerald-400/25 text-emerald-200' : 'border-amber-400/25 text-amber-200'}`}>
+          Listening: {inputReady ? 'ready' : draft.sttProvider === 'disabled' ? 'STT disabled' : 'credential required'}
+        </div>
+        <div className={`rounded border px-2 py-1 ${draft.ttsProvider !== 'disabled' ? 'border-emerald-400/25 text-emerald-200' : 'border-white/10 text-white/40'}`}>
+          Spoken replies: {draft.ttsProvider === 'disabled' ? 'silent' : draft.ttsProvider}
+        </div>
       </div>
 
       <div>
@@ -205,8 +217,14 @@ export function VoiceSettingsPanel({ status, onStatusChange, lastError }: VoiceS
 
       {(message || lastError) && <p className="break-words rounded bg-black/30 p-2 text-[9px] text-amber-100/80">{message || lastError}</p>}
 
+      {hasUnsavedSettings && (
+        <p className="rounded border border-amber-400/20 bg-amber-400/5 p-2 text-[9px] text-amber-200">
+          Provider or voice settings have not been saved yet. Saving a credential does not activate that provider.
+        </p>
+      )}
+
       <div className="flex gap-2">
-        <button disabled={busy} onClick={() => void save()} className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-cyan-500/20 px-2 py-1.5 text-[10px] font-semibold text-cyan-100 disabled:opacity-40"><Save size={12} /> Save voice</button>
+        <button disabled={busy} onClick={() => void save()} className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-cyan-500/20 px-2 py-1.5 text-[10px] font-semibold text-cyan-100 disabled:opacity-40"><Save size={12} /> Save voice settings</button>
         <button disabled={busy || draft.ttsProvider === 'disabled'} onClick={() => void preview()} className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-white/10 px-2 py-1.5 text-[10px] text-white/70 disabled:opacity-40"><Volume2 size={12} /> Preview</button>
       </div>
     </div>

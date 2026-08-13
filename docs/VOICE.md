@@ -18,6 +18,8 @@ Native microphone
 - **Tap to talk** is the default. Enable the microphone, speak one utterance, and capture returns to standby after transcription. Ambient speech is not continuously sent to a provider.
 - **Cloud wake word** keeps native VAD active. Each detected utterance is transcribed by the selected cloud provider and then checked for a configured wake phrase. This may consume credits and send ambient speech off-device. It is intentionally opt-in.
 
+Microphone capture and spoken replies are separate controls. Tap-to-talk can return the microphone to standby without muting the response. Select **Silent** as the speech-output provider only when audible replies are not wanted.
+
 IRIS v0.2.0 does not bundle a local wake-word model. Adding one later should happen before cloud STT so non-wake ambient audio remains local.
 
 ## Providers
@@ -26,6 +28,8 @@ Speech to text:
 
 - OpenAI: `whisper-1`, `gpt-4o-mini-transcribe`, or `gpt-4o-transcribe`
 - ElevenLabs: Scribe (`scribe_v2` by default)
+
+After selecting a provider and storing its credential, click **Save voice settings** and confirm **Listening: ready**. Credential storage does not implicitly activate a provider.
 
 Text to speech:
 

@@ -24,7 +24,14 @@ import { VoiceSettingsPanel } from './VoiceSettingsPanel';
 import { ReasoningSettingsPanel } from './ReasoningSettingsPanel';
 import type { ProviderToolCall } from '../lib/modelProvider';
 import { isDeterministicMockToolCommand, parseScreenCaptureRequest } from '../lib/interactionRouting';
-import { DEFAULT_VOICE_SETTINGS, getVoiceStatus, transcribeVoice, type VoiceStatus } from '../lib/voice';
+import {
+  DEFAULT_VOICE_SETTINGS,
+  getVoiceStatus,
+  isVoiceInputReady,
+  shouldSpeakVoiceReplies,
+  transcribeVoice,
+  type VoiceStatus,
+} from '../lib/voice';
 
 interface ScreenshotResult {
   base64: string;
@@ -1028,6 +1035,8 @@ export function IrisWindow() {
 
   // Wake words to listen for
   const wakeWords = voiceStatus.settings.wakeWords;
+  const voiceInputReady = isVoiceInputReady(voiceStatus);
+  const voiceRepliesEnabled = shouldSpeakVoiceReplies(voiceStatus.settings);
 
   // Ref to hold the speak function (defined after voice hook)
   const speakRef = useRef<(text: string) => Promise<void>>(async () => { });
@@ -1089,7 +1098,7 @@ export function IrisWindow() {
         }, POST_SPEECH_COOLDOWN_MS);
       }
     };
-  }, [voice.speak, voiceEnabled, selectedNativeDevice]);
+  }, [voice.speak]);
 
   // System Monitor for proactive alerts (Phase 3: The Interrupter)
   // This monitors battery, CPU, memory and allows IRIS to proactively speak
@@ -2980,8 +2989,10 @@ export function IrisWindow() {
 
         addMessage(cleanText, 'iris');
 
-        // Speak the response via TTS if voice is enabled
-        if (voiceEnabled && cleanText && speakRef.current) {
+        // Listening and speaking are independent. Tap-to-talk deliberately stops
+        // microphone capture after one utterance, but the resulting reply should
+        // still use the configured voice unless the user selected Silent.
+        if (voiceRepliesEnabled && cleanText && speakRef.current) {
           // Don't await - let TTS happen in background so UI stays responsive
           speakRef.current(cleanText).catch(err => console.error('[IRIS] TTS error:', err));
         }
@@ -3014,7 +3025,7 @@ export function IrisWindow() {
         setIsLoading(false);
       }
     },
-    [solstice, screenshot, addMessage, setState, setScreenshot, cleanResponseText, voiceEnabled, webcam, executeProviderTools, captureScreenForChat]
+    [solstice, screenshot, addMessage, setState, setScreenshot, cleanResponseText, voiceRepliesEnabled, webcam, executeProviderTools, captureScreenForChat]
   );
 
   useEffect(() => {
@@ -3242,8 +3253,11 @@ export function IrisWindow() {
           voiceEnabled={voiceEnabled}
           onToggleVoice={() => {
             console.log('[IrisWindow] Toggling voice, current:', voiceEnabled);
-            if (!voiceEnabled && voiceStatus.settings.sttProvider === 'disabled') {
-              setVoiceLastError('Configure a speech-to-text provider before starting voice input.');
+            if (!voiceEnabled && !voiceInputReady) {
+              const provider = voiceStatus.settings.sttProvider;
+              setVoiceLastError(provider === 'disabled'
+                ? 'Choose OpenAI or ElevenLabs under Speech to text, save the provider credential, then save voice settings.'
+                : `Save a ${provider === 'openai' ? 'OpenAI' : 'ElevenLabs'} credential before starting voice input.`);
               setShowSettings(true);
               return;
             }
