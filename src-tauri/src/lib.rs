@@ -1,6 +1,9 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+mod reasoning;
 mod screen_capture;
+mod secure_store;
+mod voice;
 
 use screen_capture::Screen;
 use serde::{Deserialize, Serialize};
@@ -2944,7 +2947,6 @@ fn utf8_boundary_at_or_before(content: &str, maximum: usize) -> usize {
 
 #[derive(Debug, Deserialize)]
 struct ModelChatRequest {
-    provider: Option<String>,
     messages: serde_json::Value,
     tools: Option<serde_json::Value>,
 }
@@ -2980,12 +2982,9 @@ fn validate_provider_url(base_url: &str, has_credential: bool) -> Result<reqwest
 /// need to be embedded in the renderer bundle or written to audit logs.
 #[tauri::command]
 async fn model_chat(request: ModelChatRequest) -> Result<serde_json::Value, String> {
-    let provider = request
-        .provider
-        .or_else(|| std::env::var("IRIS_MODEL_PROVIDER").ok())
-        .unwrap_or_else(|| "mock".to_string());
+    let config = reasoning::runtime_config()?;
 
-    if provider == "mock" {
+    if config.provider == "mock" {
         let last_text = request
             .messages
             .as_array()
@@ -2999,25 +2998,13 @@ async fn model_chat(request: ModelChatRequest) -> Result<serde_json::Value, Stri
             .unwrap_or("your request");
         return Ok(serde_json::json!({
             "provider": "mock",
-            "message": { "role": "assistant", "content": format!("Mock provider response: I received '{}'. Configure IRIS_MODEL_PROVIDER=openai-compatible for model reasoning.", last_text.chars().take(240).collect::<String>()) }
+            "message": { "role": "assistant", "content": format!("Mock provider response: I received '{}'. Configure a reasoning provider in Settings.", last_text.chars().take(240).collect::<String>()) }
         }));
     }
 
-    if provider != "openai-compatible" {
-        return Err(format!(
-            "Unsupported model provider '{}'. Use 'mock' or 'openai-compatible'.",
-            provider
-        ));
-    }
-
-    // Endpoint, model, and credential are loaded together at the native trust boundary.
-    // Renderer input cannot substitute the destination that receives IRIS_API_KEY.
-    let base_url = std::env::var("IRIS_BASE_URL")
-        .map_err(|_| "IRIS_BASE_URL is required for the OpenAI-compatible provider.".to_string())?;
-    let model = std::env::var("IRIS_MODEL")
-        .map_err(|_| "IRIS_MODEL is required for the OpenAI-compatible provider.".to_string())?;
-    let api_key = std::env::var("IRIS_API_KEY").unwrap_or_default();
-    let parsed = validate_provider_url(&base_url, !api_key.is_empty())?;
+    let parsed = config
+        .base_url
+        .ok_or_else(|| "REASONING_PROVIDER_INVALID".to_string())?;
 
     let endpoint = format!("{}/chat/completions", parsed.as_str().trim_end_matches('/'));
     let mut request_builder = reqwest::Client::builder()
@@ -3028,11 +3015,11 @@ async fn model_chat(request: ModelChatRequest) -> Result<serde_json::Value, Stri
         .map_err(|error| format!("Could not create provider client: {}", error))?
         .post(endpoint)
         .header(reqwest::header::CONTENT_TYPE, "application/json");
-    if !api_key.is_empty() {
-        request_builder = request_builder.bearer_auth(api_key);
+    if !config.api_key.is_empty() {
+        request_builder = request_builder.bearer_auth(&config.api_key);
     }
     let body = serde_json::json!({
-        "model": model,
+        "model": config.model,
         "messages": request.messages,
         "tools": request.tools.unwrap_or_else(|| serde_json::json!([])),
         "tool_choice": "auto"
@@ -3043,9 +3030,21 @@ async fn model_chat(request: ModelChatRequest) -> Result<serde_json::Value, Stri
         .await
         .map_err(|error| format!("Provider request failed: {}", error))?;
     let status = response.status();
-    let payload: serde_json::Value = response
-        .json()
+    const MAX_PROVIDER_RESPONSE_BYTES: u64 = 4 * 1024 * 1024;
+    if response
+        .content_length()
+        .is_some_and(|length| length > MAX_PROVIDER_RESPONSE_BYTES)
+    {
+        return Err("Provider response exceeded the 4 MiB limit.".to_string());
+    }
+    let payload_bytes = response
+        .bytes()
         .await
+        .map_err(|_| "Provider returned an unreadable response.".to_string())?;
+    if payload_bytes.len() as u64 > MAX_PROVIDER_RESPONSE_BYTES {
+        return Err("Provider response exceeded the 4 MiB limit.".to_string());
+    }
+    let payload: serde_json::Value = serde_json::from_slice(&payload_bytes)
         .map_err(|_| "Provider returned malformed JSON.".to_string())?;
     if !status.is_success() {
         return Err(format!("Provider returned HTTP {}. Response details were withheld to avoid leaking credentials or sensitive prompt content.", status.as_u16()));
@@ -5240,6 +5239,17 @@ pub fn run() {
             get_wifi_status,
             save_note,
             model_chat,
+            reasoning::reasoning_get_status,
+            reasoning::reasoning_save_settings,
+            reasoning::reasoning_set_credential,
+            reasoning::reasoning_clear_credential,
+            reasoning::reasoning_test_connection,
+            voice::voice_get_status,
+            voice::voice_save_settings,
+            voice::voice_set_credential,
+            voice::voice_clear_credential,
+            voice::voice_transcribe,
+            voice::voice_synthesize,
             show_notification,
             // Mouse/Input control (Agency)
             get_mouse_position,

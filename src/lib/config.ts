@@ -36,9 +36,9 @@ export const AGENT_CONFIG = {
 
     // Voice settings
     voice: {
-        provider: 'elevenlabs' as 'elevenlabs' | 'openai' | 'browser',
+        provider: 'system' as 'system' | 'elevenlabs' | 'openai',
         voice: '',
-        voiceId: '3eIAPRQVsX0VrSFmqoTf',
+        voiceId: '',
         speed: 1
     }
 } as const;

@@ -35,7 +35,7 @@ export interface ProviderConfig {
   provider: string;
 }
 
-interface NativeModelResponse {
+export interface NativeModelResponse {
   provider: string;
   message?: {
     content?: string | null;
@@ -44,6 +44,15 @@ interface NativeModelResponse {
       function?: { name?: string; arguments?: string | Record<string, unknown> };
     }>;
   };
+  choices?: Array<{
+    message?: {
+      content?: string | null;
+      tool_calls?: Array<{
+        id?: string;
+        function?: { name?: string; arguments?: string | Record<string, unknown> };
+      }>;
+    };
+  }>;
   text?: string;
   tool_calls?: ProviderToolCall[];
   error?: string;
@@ -64,9 +73,9 @@ function parseArguments(value: string | Record<string, unknown> | undefined): Re
   return {};
 }
 
-function normalizeResponse(response: NativeModelResponse): ProviderResponse {
+export function normalizeNativeModelResponse(response: NativeModelResponse): ProviderResponse {
   if (response.error) throw new Error(response.error);
-  const message = response.message;
+  const message = response.message || response.choices?.[0]?.message;
   const rawCalls = response.tool_calls || message?.tool_calls || [];
   const toolCalls = rawCalls.map((call, index) => {
     const functionCall = 'function' in call ? call.function : undefined;
@@ -157,12 +166,11 @@ export class OpenAICompatibleProvider implements IrisModelProvider {
     }));
     const response = await invoke<NativeModelResponse>('model_chat', {
       request: {
-        provider: this.id,
         messages: transportMessages,
         tools,
       },
     });
-    return normalizeResponse(response);
+    return normalizeNativeModelResponse(response);
   }
 }
 
@@ -173,6 +181,6 @@ export function createModelProvider(config: ProviderConfig): IrisModelProvider {
 }
 
 export function getProviderConfig(): ProviderConfig {
-  const provider = (import.meta.env.IRIS_MODEL_PROVIDER || import.meta.env.VITE_IRIS_MODEL_PROVIDER || localStorage.getItem('iris-model-provider') || 'mock').trim();
-  return { provider };
+  const configured = (import.meta.env.IRIS_MODEL_PROVIDER || import.meta.env.VITE_IRIS_MODEL_PROVIDER || 'mock').trim();
+  return { provider: configured === 'mock' ? 'mock' : 'openai-compatible' };
 }

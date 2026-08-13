@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { playSpeechResponse, stopVoicePlayback, synthesizeVoice } from '../lib/voice';
 
 export type VoiceState = 'idle' | 'listening' | 'hearing' | 'processing' | 'speaking';
 
@@ -87,27 +88,38 @@ export function useVoice({ onWakeWord, onTranscript, onStateChange, onAudioLevel
   }, [isAwake, onTranscript, onWakeWord, updateState]);
 
   const speak = useCallback(async (text: string): Promise<void> => {
-    if (!text || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    if (!text || typeof window === 'undefined') return;
     speakingRef.current = true;
     stopListening();
     updateState('speaking');
     onIrisAudioLevel?.(0.5);
-    await new Promise<void>((resolve) => {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 1;
-      utterance.pitch = 1.05;
-      utterance.onend = () => resolve();
-      utterance.onerror = () => resolve();
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utterance);
-    });
-    speakingRef.current = false;
-    onIrisAudioLevel?.(0);
-    updateState('idle');
+    try {
+      const response = await synthesizeVoice(text);
+      await playSpeechResponse(text, response, onIrisAudioLevel);
+      setError(null);
+    } catch (voiceError) {
+      const message = String(voiceError);
+      if (message.includes('VOICE_TTS_DISABLED')) return;
+      setError(message);
+      // Keep IRIS conversational if a paid provider is unavailable or out of credit.
+      if ('speechSynthesis' in window) {
+        const fallback = new SpeechSynthesisUtterance(text);
+        await new Promise<void>((resolve) => {
+          fallback.onend = () => resolve();
+          fallback.onerror = () => resolve();
+          window.speechSynthesis.cancel();
+          window.speechSynthesis.speak(fallback);
+        });
+      }
+    } finally {
+      speakingRef.current = false;
+      onIrisAudioLevel?.(0);
+      updateState('idle');
+    }
   }, [onIrisAudioLevel, stopListening, updateState]);
 
   const interruptSpeech = useCallback(async () => {
-    window.speechSynthesis?.cancel();
+    stopVoicePlayback();
     speakingRef.current = false;
     onIrisAudioLevel?.(0);
     updateState('idle');
@@ -125,7 +137,7 @@ export function useVoice({ onWakeWord, onTranscript, onStateChange, onAudioLevel
 
   useEffect(() => () => {
     try { recognitionRef.current?.stop(); } catch { /* ignore */ }
-    window.speechSynthesis?.cancel();
+    stopVoicePlayback();
   }, []);
 
   return {

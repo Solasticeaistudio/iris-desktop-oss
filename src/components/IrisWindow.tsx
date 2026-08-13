@@ -20,8 +20,11 @@ import { FloatingMessageStack } from './FloatingMessageStack';
 import { IrisParticles, type IrisParticlesRef } from './IrisParticles';
 import { toolRegistry, setAuditContext, clearAuditContext, executeSensitiveTool, executeControlTool } from '../lib/toolRegistry';
 import { ToolBuilderPanel } from './ToolBuilderPanel';
+import { VoiceSettingsPanel } from './VoiceSettingsPanel';
+import { ReasoningSettingsPanel } from './ReasoningSettingsPanel';
 import type { ProviderToolCall } from '../lib/modelProvider';
 import { isDeterministicMockToolCommand, parseScreenCaptureRequest } from '../lib/interactionRouting';
+import { DEFAULT_VOICE_SETTINGS, getVoiceStatus, transcribeVoice, type VoiceStatus } from '../lib/voice';
 
 interface ScreenshotResult {
   base64: string;
@@ -115,12 +118,25 @@ export function IrisWindow() {
   const [showToolBuilder, setShowToolBuilder] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [irisAudioLevel, setIrisAudioLevel] = useState(0);
-  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [voiceLastError, setVoiceLastError] = useState<string | null>(null);
+  const [voiceStatus, setVoiceStatus] = useState<VoiceStatus>({
+    settings: DEFAULT_VOICE_SETTINGS,
+    openai: { configured: false, source: 'none' },
+    elevenlabs: { configured: false, source: 'none' },
+    secureStorageAvailable: false,
+  });
   const [_isIrisSpeakingState, setIsIrisSpeakingState] = useState(false); // State version for disabling mic
   const [nativeDevices, setNativeDevices] = useState<NativeAudioDevice[]>([]);
   const [selectedNativeDevice, setSelectedNativeDevice] = useState<string>('');
   const [_webcamEnabled, _setWebcamEnabled] = useState(false);
   const appWindow = getCurrentWindow();
+
+  useEffect(() => {
+    getVoiceStatus()
+      .then(setVoiceStatus)
+      .catch((error) => setVoiceLastError(String(error)));
+  }, []);
 
   // Initialize webcam for vision capabilities
   const webcam = useWebcam({
@@ -1011,10 +1027,11 @@ export function IrisWindow() {
   }, [addMessage]);
 
   // Wake words to listen for
-  const wakeWords = ['hey iris', 'hey, iris', 'hi iris', 'okay iris', 'yo iris', 'iris'];
+  const wakeWords = voiceStatus.settings.wakeWords;
 
   // Ref to hold the speak function (defined after voice hook)
   const speakRef = useRef<(text: string) => Promise<void>>(async () => { });
+  const handleSendMessageRef = useRef<((message: string) => Promise<void>) | null>(null);
 
   // Track last voice interaction for continuous conversation window
   const lastVoiceInteraction = useRef<number>(0);
@@ -1105,12 +1122,21 @@ export function IrisWindow() {
     },
   });
 
-  // Native audio capture remains available for local level detection. OSS v0.1
-  // deliberately does not send microphone audio to a private STT service.
-  const transcribeAudio = useCallback(async (_audioBase64: string): Promise<string | null> => {
-    console.warn('[IRIS] Native STT is not configured; use the browser voice provider or type a message.');
-    setState('idle');
-    return null;
+  // Audio is transcribed by the Rust voice host. Provider destinations and
+  // credentials never come from the renderer invocation.
+  const transcribeAudio = useCallback(async (audioBase64: string): Promise<string | null> => {
+    try {
+      setState('thinking');
+      const result = await transcribeVoice(audioBase64);
+      setVoiceLastError(null);
+      return result.text.trim() || null;
+    } catch (error) {
+      const message = String(error);
+      console.error('[IRIS] Native transcription failed:', message);
+      setVoiceLastError(message);
+      setState('idle');
+      return null;
+    }
   }, [setState]);
 
   // Check for movement intent - returns position or null
@@ -2304,6 +2330,8 @@ export function IrisWindow() {
     onAudioRecorded: async (audioBase64: string, durationMs: number) => {
       if (!voiceEnabled) return;
 
+      const tapToTalk = voiceStatus.settings.inputMode === 'tap_to_talk';
+
       // POST-SPEECH COOLDOWN: Reject audio captured too soon after IRIS finished speaking
       // This prevents her from hearing echoes of her own voice
       const timeSinceSpeech = Date.now() - lastSpeechEndTime.current;
@@ -2315,6 +2343,8 @@ export function IrisWindow() {
       console.log('[IRIS] Audio recorded, sending to STT...', durationMs, 'ms');
       const transcript = await transcribeAudio(audioBase64);
 
+      if (tapToTalk) setVoiceEnabled(false);
+
       if (!transcript) {
         console.log('[IRIS] No transcript received');
         setState('idle');
@@ -2323,6 +2353,12 @@ export function IrisWindow() {
 
       console.log('[IRIS] Transcript:', transcript);
       const lowerTranscript = transcript.toLowerCase();
+
+      if (tapToTalk) {
+        if (handleSendMessageRef.current) await handleSendMessageRef.current(transcript);
+        else await handleVoiceCommand(transcript);
+        return;
+      }
 
       // ECHO CANCELLATION / BARGE-IN LOGIC
       if (isIrisSpeaking.current) {
@@ -2381,7 +2417,8 @@ export function IrisWindow() {
         if (command.length > 2) {
           // User said something after wake word - process it
           console.log('[IRIS] Command in same utterance:', command);
-          await handleVoiceCommand(command);
+          if (handleSendMessageRef.current) await handleSendMessageRef.current(command);
+          else await handleVoiceCommand(command);
         } else {
           // Just wake word - wait for next utterance
           console.log('[IRIS] Wake word only');
@@ -2403,7 +2440,8 @@ export function IrisWindow() {
       } else if (isActiveSession && transcript.length > 2) {
         console.log('[IRIS] Active Session: Processing follow-up command');
         lastVoiceInteraction.current = Date.now(); // Extend session
-        await handleVoiceCommand(transcript);
+        if (handleSendMessageRef.current) await handleSendMessageRef.current(transcript);
+        else await handleVoiceCommand(transcript);
       } else {
         // No wake word and not active - return to idle
         setState('idle');
@@ -2442,8 +2480,6 @@ export function IrisWindow() {
     // Restart native audio capture with new device
     await nativeAudio.stopCapture();
     await nativeAudio.startCapture(deviceName || undefined);
-    // Close settings panel after selection
-    setShowSettings(false);
   };
 
   const captureScreenForChat = useCallback(async (displayIndex = 0) => {
@@ -2981,6 +3017,13 @@ export function IrisWindow() {
     [solstice, screenshot, addMessage, setState, setScreenshot, cleanResponseText, voiceEnabled, webcam, executeProviderTools, captureScreenForChat]
   );
 
+  useEffect(() => {
+    handleSendMessageRef.current = handleSendMessage;
+    return () => {
+      handleSendMessageRef.current = null;
+    };
+  }, [handleSendMessage]);
+
 
 
   // Handle dragging the orb
@@ -3199,6 +3242,11 @@ export function IrisWindow() {
           voiceEnabled={voiceEnabled}
           onToggleVoice={() => {
             console.log('[IrisWindow] Toggling voice, current:', voiceEnabled);
+            if (!voiceEnabled && voiceStatus.settings.sttProvider === 'disabled') {
+              setVoiceLastError('Configure a speech-to-text provider before starting voice input.');
+              setShowSettings(true);
+              return;
+            }
             setVoiceEnabled(prev => !prev);
           }}
           showInput={showInput}
@@ -3215,7 +3263,7 @@ export function IrisWindow() {
             initial={{ opacity: 0, y: -20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            className="absolute top-14 left-10 z-50 p-4 w-64 rounded-2xl bg-black/80 backdrop-blur-xl border border-white/15 shadow-2xl"
+            className="absolute top-10 left-6 z-50 max-h-[540px] w-96 overflow-y-auto rounded-2xl border border-white/15 bg-black/90 p-4 shadow-2xl backdrop-blur-xl"
           >
             <div className="space-y-3">
               <div className="flex justify-between items-center mb-2">
@@ -3243,6 +3291,18 @@ export function IrisWindow() {
                   {nativeAudio.isCapturing ? 'Capturing' : 'Stopped'} - Level: {Math.round(nativeAudio.audioLevel * 100)}%
                 </p>
               </div>
+
+              <ReasoningSettingsPanel onProviderChange={solstice.refreshProvider} />
+              <VoiceSettingsPanel
+                key={JSON.stringify(voiceStatus.settings)}
+                status={voiceStatus}
+                onStatusChange={(next) => {
+                  setVoiceStatus(next);
+                  setVoiceLastError(null);
+                  if (next.settings.inputMode === 'tap_to_talk') setVoiceEnabled(false);
+                }}
+                lastError={voiceLastError || voice.error}
+              />
               {/* Camera Preview Only - lightweight, no MediaPipe */}
               <div className="flex items-center justify-between">
                 <label className="text-xs text-white/50">

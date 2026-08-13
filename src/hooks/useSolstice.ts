@@ -8,6 +8,7 @@ import {
   type ProviderMessage,
 } from '../lib/modelProvider';
 import { runAgentLoop } from '../lib/agentLoop';
+import { getReasoningStatus } from '../lib/reasoning';
 
 interface SolsticeConfig {
   onConnect?: () => void;
@@ -36,8 +37,17 @@ function messageContent(text: string, screenshot?: string): ProviderMessage['con
 export function useSolstice(config: SolsticeConfig = {}) {
   const [isConnected, setIsConnected] = useState(false);
   const activeRequest = useRef<AbortController | null>(null);
-  const providerConfig = useMemo(() => getProviderConfig(), []);
+  const [providerConfig, setProviderConfig] = useState(getProviderConfig);
   const provider = useMemo(() => createModelProvider(providerConfig), [providerConfig.provider]);
+
+  const refreshProvider = useCallback(async () => {
+    const status = await getReasoningStatus();
+    setProviderConfig({ provider: status.settings.provider === 'mock' ? 'mock' : 'openai-compatible' });
+  }, []);
+
+  useEffect(() => {
+    refreshProvider().catch((error) => console.warn('[IRIS] Reasoning provider status failed:', error));
+  }, [refreshProvider]);
 
   useEffect(() => {
     const configured = provider.id === 'mock' || provider.id === 'openai-compatible';
@@ -91,6 +101,7 @@ export function useSolstice(config: SolsticeConfig = {}) {
     isConnected,
     query,
     providerId: provider.id,
+    refreshProvider,
     cancel: () => activeRequest.current?.abort(),
   };
 }
