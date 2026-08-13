@@ -1,6 +1,8 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use screenshots::Screen;
+mod screen_capture;
+
+use screen_capture::Screen;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, HashMap};
@@ -3681,8 +3683,8 @@ async fn get_screen_info() -> Result<serde_json::Value, String> {
 
 #[tauri::command]
 async fn capture_window_by_title(title: String) -> Result<ScreenshotResult, String> {
+    use crate::screen_capture::Screen;
     use image::ImageEncoder;
-    use screenshots::Screen;
 
     // First, get the window bounds
     let script = format!(

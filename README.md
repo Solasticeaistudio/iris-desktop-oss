@@ -57,7 +57,7 @@ flowchart TD
 - Windows 10/11 is the supported v0.2.0 platform
 - macOS and Linux are experimental/not yet supported because several native capabilities are Windows-specific
 - Node.js 20 or newer and npm
-- Rust 1.77.2 or newer with the platform prerequisites listed in the [Tauri prerequisites guide](https://v2.tauri.app/start/prerequisites/)
+- Rust 1.92.0 with the platform prerequisites listed in the [Tauri prerequisites guide](https://v2.tauri.app/start/prerequisites/)
 - WebView2 and the Windows native build prerequisites required by Tauri
 
 Clone the repository and install the frontend dependencies:

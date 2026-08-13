@@ -76,7 +76,16 @@ Generated tool names use `foundry_<origin>_<operation>`, lowercase provider-safe
 - `cargo test --all-targets --all-features`: PASS — 63/63.
 - Foundry behavioral tests: PASS — 48/48; existing IRIS regressions: PASS — 46/46.
 - `npm run tauri:build`: PASS — v0.2.0 application, MSI, and NSIS built for validation only.
-- `cargo audit`: NOT INSTALLED; no global tool was installed.
+- Rust dependency remediation: PASS — Tauri 2.11.5 and targeted parent/transitive updates remove all known RustSec vulnerability findings from the locked graph.
+- `cargo audit` 0.22.2: PASS — zero known vulnerabilities; remaining unmaintained/unsound warnings are inventoried separately and are not active vulnerability findings.
+
+### RustSec informational warning inventory
+
+- Unmaintained: 18 — the Tauri Linux GTK3 stack (`atk`, `gdk`, `gtk` and their sys/macros variants), plus transitive build/parser crates `fxhash`, `proc-macro-error`, `rustls-pemfile`, and the six `unic-*` crates.
+- Unsound: 3 — `glib` 0.18.5 in Tauri's non-Windows GTK stack, `memmap2` 0.8.0 in Enigo's non-Windows XKB path, and `rand` 0.7.3 in Tauri's HTML-parser build graph.
+- Yanked: 0.
+
+These warnings are not known-vulnerability findings and are not active Windows runtime paths. Current compatible Tauri and IRIS direct dependencies do not remove them without a substantial upstream/platform migration; they remain visible for continued monitoring and are not suppressed by audit configuration.
 
 ## Runtime boundary
 

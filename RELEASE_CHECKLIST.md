@@ -15,7 +15,7 @@
 - [ ] Replace the publication repository URL placeholder
 - [ ] Inspect screenshots/assets
 - [ ] Create public repository
-- [ ] Run `cargo audit` (manual while the tool is unavailable locally)
+- [x] Run `cargo audit` 0.22.2 — zero known vulnerabilities after Rust dependency remediation; review informational warnings in the release audit
 - [ ] Create v0.2.0 tag
 - [ ] Publish release
 - [ ] Announce project
