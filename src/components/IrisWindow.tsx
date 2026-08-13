@@ -2502,6 +2502,14 @@ export function IrisWindow() {
     await nativeAudio.startCapture(deviceName || undefined);
   };
 
+  const deliverIrisReply = useCallback(async (text: string, spokenText = text) => {
+    addMessage(text, 'iris');
+    if (voiceRepliesEnabled && spokenText.trim()) {
+      setState('delivering');
+      await speakRef.current(spokenText);
+    }
+  }, [addMessage, setState, voiceRepliesEnabled]);
+
   const captureScreenForChat = useCallback(async (displayIndex = 0) => {
     setState('thinking');
     try {
@@ -2510,19 +2518,18 @@ export function IrisWindow() {
         throw new Error('Screen capture returned an empty frame');
       }
       setScreenshot(captured.base64);
-      addMessage(
+      await deliverIrisReply(
         `Screenshot captured from monitor ${displayIndex + 1} (${captured.width}×${captured.height}). It will be included with your next message.`,
-        'iris',
       );
       setState('success');
     } catch (error) {
       console.error('[IRIS] Screen capture failed:', error);
-      addMessage(`Screen capture failed: ${String(error)}`, 'iris');
+      await deliverIrisReply(`Screen capture failed: ${String(error)}`);
       setState('error');
     } finally {
       window.setTimeout(() => setState('idle'), 500);
     }
-  }, [addMessage, setScreenshot, setState]);
+  }, [deliverIrisReply, setScreenshot, setState]);
 
   // Handle sending messages (text input)
   const handleSendMessage = useCallback(
@@ -2611,7 +2618,7 @@ export function IrisWindow() {
 
           } catch (e) {
             console.error('[IRIS] Failed to capture from webcam:', e);
-            addMessage("I couldn't access your camera. Please check permissions.", 'iris');
+            await deliverIrisReply("I couldn't access your camera. Please check permissions.");
             setState('idle');
             return;
           }
@@ -2632,9 +2639,7 @@ export function IrisWindow() {
         const speakRequest = parseSpeakRequest(message);
         if (speakRequest) {
           addMessage(message, 'user');
-          addMessage(speakRequest, 'iris');
-          setState('delivering');
-          if (voiceRepliesEnabled) await speakRef.current(speakRequest);
+          await deliverIrisReply(speakRequest);
           setState('idle');
           return;
         }
@@ -2652,11 +2657,7 @@ export function IrisWindow() {
 
             if (macro) {
               const response = `Executing ${macro.name}!`;
-              addMessage(response, 'iris');
-              setState('delivering');
-              if (speakRef.current) {
-                await speakRef.current(response);
-              }
+              await deliverIrisReply(response);
 
               // Execute the macro
               const result = await executeMacro(macro);
@@ -2664,26 +2665,20 @@ export function IrisWindow() {
               if (result.success) {
                 if (result.errors.length > 0) {
                   const errorMsg = `${macro.name} finished with some issues: ${result.errors.join(', ')}`;
-                  addMessage(errorMsg, 'iris');
-                  if (speakRef.current) {
-                    await speakRef.current("Macro finished with some issues.");
-                  }
+                  await deliverIrisReply(errorMsg, "Macro finished with some issues.");
                 }
               } else {
                 const errorMsg = `Macro failed: ${result.errors.join(', ')}`;
-                addMessage(errorMsg, 'iris');
-                if (speakRef.current) {
-                  await speakRef.current("I had trouble running that macro.");
-                }
+                await deliverIrisReply(errorMsg, "I had trouble running that macro.");
               }
             } else {
               // No macro found for the trigger despite intent detection
-              addMessage("I detected a macro intent but couldn't find the definition.", 'iris');
+              await deliverIrisReply("I detected a macro intent but couldn't find the definition.");
             }
             setState('idle');
           } catch (error) {
             console.error('[IRIS] Macro error:', error);
-            addMessage("I had trouble with that macro.", 'iris');
+            await deliverIrisReply("I had trouble with that macro.");
             setState('idle');
           }
           return;
@@ -2692,14 +2687,14 @@ export function IrisWindow() {
         if (lowerMessage.includes('spear mode') || lowerMessage.includes('spearmode')) {
           setSpearMode(true);
           addMessage(message, 'user');
-          addMessage("Fast provider mode activated.", 'iris');
+          await deliverIrisReply("Fast provider mode activated.");
           setState('idle');
           return;
         }
         if (lowerMessage.includes('phalanx mode') || lowerMessage.includes('phalanxmode')) {
           setSpearMode(false);
           addMessage(message, 'user');
-          addMessage("Standard provider mode activated.", 'iris');
+          await deliverIrisReply("Standard provider mode activated.");
           setState('idle');
           return;
         }
@@ -2712,24 +2707,24 @@ export function IrisWindow() {
           try {
             if (monitorIntent.action === 'turn-off') {
               await executeSensitiveTool('turn_off_monitors', {});
-              addMessage("Turning off the monitors!", 'iris');
+              await deliverIrisReply("Turning off the monitors!");
             } else if (monitorIntent.action === 'switch') {
               const result = await invoke<string>('move_to_monitor', { target: monitorIntent.target || 'other' });
-              addMessage(result, 'iris');
+              await deliverIrisReply(result);
             } else if (monitorIntent.action === 'count') {
               const monitors = await invoke<Array<{ index: number; name: string }>>('get_monitors');
-              addMessage(monitors.length === 1 ? "You have one monitor connected." : `You have ${monitors.length} monitors connected.`, 'iris');
+              await deliverIrisReply(monitors.length === 1 ? "You have one monitor connected." : `You have ${monitors.length} monitors connected.`);
             } else if (monitorIntent.action === 'ghost-on') {
               await toggleGhostMode(true);
-              addMessage("Going ghost! Say 'be solid' to interact with me again.", 'iris');
+              await deliverIrisReply("Going ghost! Say 'be solid' to interact with me again.");
             } else if (monitorIntent.action === 'ghost-off') {
               await toggleGhostMode(false);
-              addMessage("I'm solid again! You can click me now.", 'iris');
+              await deliverIrisReply("I'm solid again! You can click me now.");
             }
             setState('idle');
           } catch (e) {
             console.error('[IRIS] Monitor intent error:', e);
-            addMessage("I had trouble with that command.", 'iris');
+            await deliverIrisReply("I had trouble with that command.");
             setState('idle');
           }
           return;
@@ -2741,13 +2736,10 @@ export function IrisWindow() {
           addMessage(message, 'user');
           try {
             await invoke('move_window', { position: movementPosition });
-            addMessage("Moving!", 'iris');
-            if (speakRef.current) {
-              await speakRef.current("Moving!");
-            }
+            await deliverIrisReply("Moving!");
             setState('idle');
           } catch (e) {
-            addMessage("I couldn't move.", 'iris');
+            await deliverIrisReply("I couldn't move.");
             setState('idle');
           }
           return;
@@ -2768,11 +2760,14 @@ export function IrisWindow() {
               const text = typeof response === 'object' && response && 'result' in response
                 ? String((response as { result: unknown }).result ?? '')
                 : '';
-              addMessage(text ? `Clipboard: "${text.substring(0, 200)}${text.length > 200 ? '...' : ''}"` : "Clipboard is empty.", 'iris');
+              await deliverIrisReply(
+                text ? `Clipboard: "${text.substring(0, 200)}${text.length > 200 ? '...' : ''}"` : "Clipboard is empty.",
+                text ? "The approved clipboard content is available in chat." : "Clipboard is empty.",
+              );
             }
             setState('idle');
           } catch (e) {
-            addMessage("Couldn't access clipboard.", 'iris');
+            await deliverIrisReply("Couldn't access clipboard.");
             setState('idle');
           }
           return;
@@ -2786,14 +2781,14 @@ export function IrisWindow() {
           try {
             if (volumeAction.action === 'set' && volumeAction.value !== undefined) {
               await invoke('set_volume', { level: volumeAction.value });
-              addMessage(`Volume set to ${volumeAction.value}%.`, 'iris');
+              await deliverIrisReply(`Volume set to ${volumeAction.value}%.`);
             } else if (volumeAction.action === 'adjust') {
               await invoke('adjust_volume', { direction: volumeAction.direction });
-              addMessage(`Volume ${volumeAction.direction === 'up' ? 'increased' : 'decreased'}.`, 'iris');
+              await deliverIrisReply(`Volume ${volumeAction.direction === 'up' ? 'increased' : 'decreased'}.`);
             }
             setState('idle');
           } catch (e) {
-            addMessage("Couldn't adjust volume.", 'iris');
+            await deliverIrisReply("Couldn't adjust volume.");
             setState('idle');
           }
           return;
@@ -2806,10 +2801,10 @@ export function IrisWindow() {
           setState('thinking');
           try {
             await invoke('media_control', { action: mediaAction });
-            addMessage(mediaAction === 'play' ? "Playing!" : mediaAction === 'pause' ? "Paused." : `Media: ${mediaAction}`, 'iris');
+            await deliverIrisReply(mediaAction === 'play' ? "Playing!" : mediaAction === 'pause' ? "Paused." : `Media: ${mediaAction}`);
             setState('idle');
           } catch (e) {
-            addMessage("Couldn't control media.", 'iris');
+            await deliverIrisReply("Couldn't control media.");
             setState('idle');
           }
           return;
@@ -2821,10 +2816,10 @@ export function IrisWindow() {
           setState('thinking');
           try {
             const stats = await invoke<{ cpu: number; memory: number; battery?: number }>('get_system_stats');
-            addMessage(`CPU: ${stats.cpu.toFixed(1)}%, Memory: ${stats.memory.toFixed(1)}%${stats.battery ? `, Battery: ${stats.battery}%` : ''}`, 'iris');
+            await deliverIrisReply(`CPU: ${stats.cpu.toFixed(1)}%, Memory: ${stats.memory.toFixed(1)}%${stats.battery ? `, Battery: ${stats.battery}%` : ''}`);
             setState('idle');
           } catch (e) {
-            addMessage("Couldn't get system stats.", 'iris');
+            await deliverIrisReply("Couldn't get system stats.");
             setState('idle');
           }
           return;
@@ -2838,14 +2833,14 @@ export function IrisWindow() {
           try {
             if (lockSleepAction === 'lock') {
               await executeSensitiveTool('lock_computer', {});
-              addMessage("Locking computer!", 'iris');
+              await deliverIrisReply("Locking computer!");
             } else {
               await executeSensitiveTool('sleep_computer', {});
-              addMessage("Going to sleep!", 'iris');
+              await deliverIrisReply("Going to sleep!");
             }
             setState('idle');
           } catch (e) {
-            addMessage("Couldn't do that.", 'iris');
+            await deliverIrisReply("Couldn't do that.");
             setState('idle');
           }
           return;
@@ -2858,10 +2853,10 @@ export function IrisWindow() {
           setState('thinking');
           try {
             await executeSensitiveTool('open_url', { url: urlToOpen });
-            addMessage("Opening that link!", 'iris');
+            await deliverIrisReply("Opening that link!");
             setState('idle');
           } catch (e) {
-            addMessage("Couldn't open URL.", 'iris');
+            await deliverIrisReply("Couldn't open URL.");
             setState('idle');
           }
           return;
@@ -2878,10 +2873,10 @@ export function IrisWindow() {
           setState('thinking');
           try {
             await executeSensitiveTool('close_app', { appName: appToClose });
-            addMessage(`Closed ${appToClose}.`, 'iris');
+            await deliverIrisReply(`Closed ${appToClose}.`);
             setState('idle');
           } catch (e) {
-            addMessage(`Couldn't close ${appToClose}.`, 'iris');
+            await deliverIrisReply(`Couldn't close ${appToClose}.`);
             setState('idle');
           }
           return;
@@ -2893,10 +2888,10 @@ export function IrisWindow() {
           setState('thinking');
           try {
             await invoke('show_desktop');
-            addMessage("Showing desktop!", 'iris');
+            await deliverIrisReply("Showing desktop!");
             setState('idle');
           } catch (e) {
-            addMessage("Couldn't show desktop.", 'iris');
+            await deliverIrisReply("Couldn't show desktop.");
             setState('idle');
           }
           return;
@@ -2918,12 +2913,10 @@ export function IrisWindow() {
               response += response ? `, and today is ${date}.` : `Today is ${date}.`;
             }
             if (!response.endsWith('.')) response += '.';
-            addMessage(response, 'iris');
-            setState('delivering');
-            if (voiceRepliesEnabled) await speakRef.current(response);
+            await deliverIrisReply(response);
             setState('idle');
           } catch (e) {
-            addMessage("Couldn't get the time.", 'iris');
+            await deliverIrisReply("Couldn't get the time.");
             setState('idle');
           }
           return;
@@ -2937,14 +2930,14 @@ export function IrisWindow() {
           try {
             if (brightnessAction.action === 'set' && brightnessAction.value !== undefined) {
               await invoke('set_brightness', { level: brightnessAction.value });
-              addMessage(`Brightness set to ${brightnessAction.value}%.`, 'iris');
+              await deliverIrisReply(`Brightness set to ${brightnessAction.value}%.`);
             } else if (brightnessAction.action === 'adjust') {
               await invoke('adjust_brightness', { direction: brightnessAction.direction });
-              addMessage(`Brightness ${brightnessAction.direction === 'up' ? 'increased' : 'decreased'}.`, 'iris');
+              await deliverIrisReply(`Brightness ${brightnessAction.direction === 'up' ? 'increased' : 'decreased'}.`);
             }
             setState('idle');
           } catch (e) {
-            addMessage("Couldn't adjust brightness.", 'iris');
+            await deliverIrisReply("Couldn't adjust brightness.");
             setState('idle');
           }
           return;
@@ -2958,10 +2951,10 @@ export function IrisWindow() {
           try {
             const enabled = wifiAction === 'toggle' ? !await invoke<boolean>('get_wifi_status') : wifiAction === 'enable';
             await executeSensitiveTool('toggle_wifi', { enable: enabled });
-            addMessage(`WiFi ${wifiAction === 'enable' ? 'enabled' : wifiAction === 'disable' ? 'disabled' : 'toggled'}.`, 'iris');
+            await deliverIrisReply(`WiFi ${wifiAction === 'enable' ? 'enabled' : wifiAction === 'disable' ? 'disabled' : 'toggled'}.`);
             setState('idle');
           } catch (e) {
-            addMessage("Couldn't control WiFi.", 'iris');
+            await deliverIrisReply("Couldn't control WiFi.");
             setState('idle');
           }
           return;
@@ -2975,10 +2968,10 @@ export function IrisWindow() {
           try {
              
             const result = evaluateArithmeticExpression(calcExpression.replace(/x/gi, '*').replace(/[\u00f7]/g, '/'));
-            addMessage(`${calcExpression} = ${result}`, 'iris');
+            await deliverIrisReply(`${calcExpression} = ${result}`);
             setState('idle');
           } catch (e) {
-            addMessage("Couldn't calculate that.", 'iris');
+            await deliverIrisReply("Couldn't calculate that.");
             setState('idle');
           }
           return;
@@ -3013,15 +3006,9 @@ export function IrisWindow() {
         setState('delivering');
         await sleep(500);
 
-        addMessage(cleanText, 'iris');
-
-        // Listening and speaking are independent. Tap-to-talk deliberately stops
-        // microphone capture after one utterance, but the resulting reply should
-        // still use the configured voice unless the user selected Silent.
-        if (voiceRepliesEnabled && cleanText && speakRef.current) {
-          // Don't await - let TTS happen in background so UI stays responsive
-          speakRef.current(cleanText).catch(err => console.error('[IRIS] TTS error:', err));
-        }
+        // Don't await provider speech; visible delivery stays responsive while
+        // the same answer is synthesized in the background.
+        deliverIrisReply(cleanText).catch(err => console.error('[IRIS] TTS error:', err));
 
         if (canvas) {
           console.log('[IRIS] Received canvas data, writing to localStorage:', canvas);
@@ -3043,7 +3030,7 @@ export function IrisWindow() {
         }
       } catch (error) {
         console.error('[IRIS] Error:', error);
-        addMessage("I encountered an error. Please try again.", 'iris');
+        await deliverIrisReply("I encountered an error. Please try again.");
         setState('error');
         await sleep(1500);
         setState('idle');
@@ -3051,7 +3038,7 @@ export function IrisWindow() {
         setIsLoading(false);
       }
     },
-    [solstice, screenshot, addMessage, setState, setScreenshot, cleanResponseText, voiceRepliesEnabled, webcam, executeProviderTools, captureScreenForChat]
+    [solstice, screenshot, addMessage, setState, setScreenshot, cleanResponseText, webcam, executeProviderTools, captureScreenForChat, deliverIrisReply]
   );
 
   useEffect(() => {

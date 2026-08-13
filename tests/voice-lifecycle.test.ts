@@ -35,7 +35,7 @@ test('spoken replies are controlled by TTS settings, not microphone capture stat
 
 test('Gemini/provider responses do not gate TTS on the tap-to-talk microphone flag', async () => {
   const source = await readFile(new URL('../src/components/IrisWindow.tsx', import.meta.url), 'utf8');
-  assert.match(source, /if \(voiceRepliesEnabled && cleanText && speakRef\.current\)/);
+  assert.match(source, /deliverIrisReply\(cleanText\)/);
   assert.doesNotMatch(source, /if \(voiceEnabled && cleanText && speakRef\.current\)/);
 });
 
@@ -49,6 +49,28 @@ test('voice settings distinguish stored credentials from an activated STT provid
 test('deterministic time and repeat responses enter configured speech output', async () => {
   const source = await readFile(new URL('../src/components/IrisWindow.tsx', import.meta.url), 'utf8');
   assert.match(source, /const speakRequest = parseSpeakRequest\(message\)/);
-  assert.match(source, /if \(voiceRepliesEnabled\) await speakRef\.current\(speakRequest\)/);
-  assert.match(source, /if \(voiceRepliesEnabled\) await speakRef\.current\(response\)/);
+  assert.match(source, /await deliverIrisReply\(speakRequest\)/);
+  assert.match(source, /await deliverIrisReply\(response\)/);
+});
+
+test('unified typed and transcribed requests use one text-plus-audio reply helper', async () => {
+  const source = await readFile(new URL('../src/components/IrisWindow.tsx', import.meta.url), 'utf8');
+  assert.match(source, /const deliverIrisReply = useCallback/);
+  assert.match(source, /addMessage\(text, 'iris'\)/);
+  assert.match(source, /if \(voiceRepliesEnabled && spokenText\.trim\(\)\)/);
+  assert.match(source, /await speakRef\.current\(spokenText\)/);
+
+  const start = source.indexOf('const handleSendMessage = useCallback');
+  const end = source.indexOf('handleSendMessageRef.current = handleSendMessage');
+  const unifiedPath = source.slice(start, end);
+  const directAssistantLines = unifiedPath
+    .split('\n')
+    .filter((line) => line.includes('addMessage(') && line.includes("'iris'"));
+  assert.deepEqual(directAssistantLines, []);
+  assert.match(unifiedPath, /deliverIrisReply\(cleanText\)/);
+});
+
+test('sensitive clipboard text uses a non-secret spoken summary', async () => {
+  const source = await readFile(new URL('../src/components/IrisWindow.tsx', import.meta.url), 'utf8');
+  assert.match(source, /The approved clipboard content is available in chat/);
 });

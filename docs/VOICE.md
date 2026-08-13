@@ -22,6 +22,12 @@ Microphone capture and spoken replies are separate controls. Tap-to-talk can ret
 
 IRIS v0.2.0 does not bundle a local wake-word model. Adding one later should happen before cloud STT so non-wake ambient audio remains local.
 
+## Conversation contract
+
+Typed and transcribed requests converge on the same message and agent path. Every conversational reply is displayed as text and, unless **Silent** is explicitly selected, sent to the configured speech-output provider. Tap-to-talk controls microphone capture only; it does not mute the resulting answer.
+
+If transcription fails, IRIS does not invent or display a user message. If speech synthesis fails, the visible answer remains available and IRIS may fall back to Windows system speech. Sensitive local results can use a safer spoken summary—for example, approved clipboard content remains visible in chat rather than being silently copied to a cloud TTS provider.
+
 ## Providers
 
 Speech to text:
