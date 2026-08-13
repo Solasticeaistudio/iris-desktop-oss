@@ -46,3 +46,24 @@ export function parseScreenCaptureRequest(input: string): ScreenCaptureRequest |
   if (!Number.isSafeInteger(requested) || requested < 1) return null;
   return { displayIndex: requested - 1 };
 }
+
+export function parseScreenVisionRequest(input: string): ScreenCaptureRequest | null {
+  const normalized = input.trim().replace(/[.!?]+$/, '').trim();
+  const screenTarget = /\b(?:screenshot|screen|monitor|display|desktop)\b/i;
+  if (!screenTarget.test(normalized)) return null;
+
+  const asksForVisualUnderstanding = [
+    /\b(?:can|could|do|would)\s+you\s+see\b/i,
+    /\bwhat(?:'s|\s+is|\s+do\s+you\s+see).*\b(?:screen|monitor|display|desktop)\b/i,
+    /\b(?:describe|inspect|analy[sz]e|read|look\s+at)\b.*\b(?:screen|monitor|display|desktop)\b/i,
+    /\btell\s+me\s+what.*\b(?:screen|monitor|display|desktop)\b/i,
+    /\b(?:take|capture|attach|grab)\b.*\bscreenshot\b.*\b(?:describe|explain|analy[sz]e|tell)\b/i,
+  ].some((pattern) => pattern.test(normalized));
+  if (!asksForVisualUnderstanding) return null;
+
+  const afterTarget = normalized.match(/\b(?:screen|monitor|display)\s*(\d+)\b/i);
+  const beforeTarget = normalized.match(/\b(\d+)(?:st|nd|rd|th)?\s+(?:screen|monitor|display)\b/i);
+  const requested = Number(afterTarget?.[1] || beforeTarget?.[1] || 1);
+  if (!Number.isSafeInteger(requested) || requested < 1) return null;
+  return { displayIndex: requested - 1 };
+}

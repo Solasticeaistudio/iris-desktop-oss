@@ -111,6 +111,8 @@ Take a screenshot and describe what you see.
 
 Chat capture is held in memory and attached to that model request; it is not necessarily saved as a file. The `take_screenshot` tool is a different action that saves a PNG under the user's Pictures/Screenshots directory.
 
+Natural questions such as `Can you see what's on my screen?` also capture the primary monitor and submit that frame in the same reasoning turn. Mention `monitor 2` or another one-based monitor number to inspect a different display.
+
 Screenshots leave the machine when attached to a cloud reasoning request. Review the screen first and avoid exposing credentials or sensitive applications.
 
 ### 6. Understand native approvals

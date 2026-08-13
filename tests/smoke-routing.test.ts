@@ -6,6 +6,7 @@ import {
   isDeterministicMockToolCommand,
   isNonSpeechTranscript,
   parseScreenCaptureRequest,
+  parseScreenVisionRequest,
   parseSpeakRequest,
 } from '../src/lib/interactionRouting';
 
@@ -20,6 +21,15 @@ test('screen capture intent selects the primary or requested one-based monitor',
   assert.deepEqual(parseScreenCaptureRequest('capture screenshot of monitor 2'), { displayIndex: 1 });
   assert.deepEqual(parseScreenCaptureRequest('capture display 3'), { displayIndex: 2 });
   assert.equal(parseScreenCaptureRequest('what is on my screen?'), null);
+});
+
+test('natural screen-vision questions capture the requested monitor for the same reasoning turn', () => {
+  assert.deepEqual(parseScreenVisionRequest("can you see what's on my screen?"), { displayIndex: 0 });
+  assert.deepEqual(parseScreenVisionRequest('take a screenshot and describe what you see'), { displayIndex: 0 });
+  assert.deepEqual(parseScreenVisionRequest('describe what is visible on monitor 2'), { displayIndex: 1 });
+  assert.deepEqual(parseScreenVisionRequest('what do you see on the 3rd display?'), { displayIndex: 2 });
+  assert.equal(parseScreenVisionRequest('turn off my monitors'), null);
+  assert.equal(parseScreenVisionRequest('take a screenshot'), null);
 });
 
 test('explicit repeat requests become deterministic local speech without capturing generic prompts', () => {
@@ -49,6 +59,13 @@ test('mock provider confirms that a screenshot attachment reached the provider b
     },
   ]);
   assert.match(response.text, /received a screenshot attachment/i);
+});
+
+test('screen-vision routing submits the freshly captured frame in the same model turn', async () => {
+  const source = await readFile(new URL('../src/components/IrisWindow.tsx', import.meta.url), 'utf8');
+  assert.match(source, /const screenVisionRequest = .*parseScreenVisionRequest\(message\)/);
+  assert.match(source, /screenFrame = captured\.base64/);
+  assert.match(source, /screenshot: screenFrame \|\| webcamFrame \|\| screenshot \|\| undefined/);
 });
 
 test('active floating chat exposes capture and Foundry count is committed after refresh', async () => {

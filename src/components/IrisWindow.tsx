@@ -27,6 +27,7 @@ import {
   isDeterministicMockToolCommand,
   isNonSpeechTranscript,
   parseScreenCaptureRequest,
+  parseScreenVisionRequest,
   parseSpeakRequest,
 } from '../lib/interactionRouting';
 import {
@@ -2535,11 +2536,30 @@ export function IrisWindow() {
   const handleSendMessage = useCallback(
     async (message: string) => {
       const deterministicMockTool = isDeterministicMockToolCommand(message);
+      const screenVisionRequest = !deterministicMockTool ? parseScreenVisionRequest(message) : null;
       // Check for webcam vision intent (same as voice handler)
-      const isVisionQuery = !deterministicMockTool && checkVisionIntent(message);
+      const isVisionQuery = !screenVisionRequest && !deterministicMockTool && checkVisionIntent(message);
       let webcamFrame: string | undefined;
+      let screenFrame: string | undefined;
 
-      if (isVisionQuery) {
+      if (screenVisionRequest) {
+        addMessage(message, 'user');
+        setState('thinking');
+        try {
+          const captured = await invoke<ScreenshotResult>('capture_screen_by_index', {
+            index: screenVisionRequest.displayIndex,
+          });
+          if (!captured.base64 || captured.width < 1 || captured.height < 1) {
+            throw new Error('Screen capture returned an empty frame');
+          }
+          screenFrame = captured.base64;
+        } catch (error) {
+          console.error('[IRIS] Screen vision capture failed:', error);
+          await deliverIrisReply(`I couldn't capture monitor ${screenVisionRequest.displayIndex + 1}. Please check the screen-capture permissions and try again.`);
+          setState('idle');
+          return;
+        }
+      } else if (isVisionQuery) {
         console.log('[IRIS] Vision intent detected in text input - capturing webcam frame...');
         addMessage(message, 'user');
         setState('thinking');
@@ -2991,7 +3011,7 @@ export function IrisWindow() {
 
       try {
         const { text, canvas, toolCalls } = await solstice.query(message, {
-          screenshot: webcamFrame || screenshot || undefined,
+          screenshot: screenFrame || webcamFrame || screenshot || undefined,
           isWebcam: !!webcamFrame,  // Flag when using webcam frame
           spearMode: spearMode,  // Provider speed preference
           history: messages.map(m => ({
