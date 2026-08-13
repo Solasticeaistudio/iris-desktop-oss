@@ -85,7 +85,7 @@ Generated tool names use `foundry_<origin>_<operation>`, lowercase provider-safe
 - Unsound: 3 — `glib` 0.18.5 in Tauri's non-Windows GTK stack, `memmap2` 0.8.0 in Enigo's non-Windows XKB path, and `rand` 0.7.3 in Tauri's HTML-parser build graph.
 - Yanked: 0.
 
-These warnings are not known-vulnerability findings and are not active Windows runtime paths. Current compatible Tauri and IRIS direct dependencies do not remove them without a substantial upstream/platform migration; they remain visible for continued monitoring and are not suppressed by audit configuration.
+These warnings are not known-vulnerability findings. The unsound entries are confined to non-Windows or build-time paths; the unmaintained `rustls-pemfile` remains in reqwest's active graph, while the other unmaintained entries are platform/build-parser debt. Current compatible Tauri and IRIS direct dependencies do not remove them without a substantial upstream/platform migration; they remain visible for continued monitoring and are not suppressed by audit configuration.
 
 ## Runtime boundary
 
