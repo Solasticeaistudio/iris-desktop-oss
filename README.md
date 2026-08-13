@@ -63,8 +63,8 @@ flowchart TD
 Clone the repository and install the frontend dependencies:
 
 ```bash
-git clone <your-fork-or-repository-url>
-cd iris
+git clone https://github.com/Solasticeaistudio/iris-desktop-oss.git
+cd iris-desktop-oss
 npm install
 ```
 
