@@ -45,3 +45,10 @@ test('voice settings distinguish stored credentials from an activated STT provid
   assert.match(panel, /Listening:/);
   assert.match(panel, /Save voice settings/);
 });
+
+test('deterministic time and repeat responses enter configured speech output', async () => {
+  const source = await readFile(new URL('../src/components/IrisWindow.tsx', import.meta.url), 'utf8');
+  assert.match(source, /const speakRequest = parseSpeakRequest\(message\)/);
+  assert.match(source, /if \(voiceRepliesEnabled\) await speakRef\.current\(speakRequest\)/);
+  assert.match(source, /if \(voiceRepliesEnabled\) await speakRef\.current\(response\)/);
+});

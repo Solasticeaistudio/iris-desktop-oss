@@ -23,7 +23,12 @@ import { ToolBuilderPanel } from './ToolBuilderPanel';
 import { VoiceSettingsPanel } from './VoiceSettingsPanel';
 import { ReasoningSettingsPanel } from './ReasoningSettingsPanel';
 import type { ProviderToolCall } from '../lib/modelProvider';
-import { isDeterministicMockToolCommand, parseScreenCaptureRequest } from '../lib/interactionRouting';
+import {
+  isDeterministicMockToolCommand,
+  isNonSpeechTranscript,
+  parseScreenCaptureRequest,
+  parseSpeakRequest,
+} from '../lib/interactionRouting';
 import {
   DEFAULT_VOICE_SETTINGS,
   getVoiceStatus,
@@ -2360,6 +2365,12 @@ export function IrisWindow() {
         return;
       }
 
+      if (isNonSpeechTranscript(transcript)) {
+        console.log('[IRIS] Ignoring non-speech transcription event:', transcript);
+        setState('idle');
+        return;
+      }
+
       console.log('[IRIS] Transcript:', transcript);
       const lowerTranscript = transcript.toLowerCase();
 
@@ -2615,6 +2626,16 @@ export function IrisWindow() {
         if (screenCaptureRequest) {
           addMessage(message, 'user');
           await captureScreenForChat(screenCaptureRequest.displayIndex);
+          return;
+        }
+
+        const speakRequest = parseSpeakRequest(message);
+        if (speakRequest) {
+          addMessage(message, 'user');
+          addMessage(speakRequest, 'iris');
+          setState('delivering');
+          if (voiceRepliesEnabled) await speakRef.current(speakRequest);
+          setState('idle');
           return;
         }
 
@@ -2887,14 +2908,19 @@ export function IrisWindow() {
           addMessage(message, 'user');
           setState('thinking');
           try {
+            let response = '';
             if (timeIntent === 'time' || timeIntent === 'both') {
               const time = await invoke<string>('get_time');
-              addMessage(`It's ${time}.`, 'iris');
+              response = `It's ${time}`;
             }
             if (timeIntent === 'date' || timeIntent === 'both') {
               const date = await invoke<string>('get_date');
-              addMessage(`Today is ${date}.`, 'iris');
+              response += response ? `, and today is ${date}.` : `Today is ${date}.`;
             }
+            if (!response.endsWith('.')) response += '.';
+            addMessage(response, 'iris');
+            setState('delivering');
+            if (voiceRepliesEnabled) await speakRef.current(response);
             setState('idle');
           } catch (e) {
             addMessage("Couldn't get the time.", 'iris');
