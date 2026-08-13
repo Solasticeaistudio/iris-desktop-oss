@@ -104,7 +104,11 @@ export class MockModelProvider implements IrisModelProvider {
       return { text: `Mock provider completed after receiving tool result: ${String(lastMessage.content).slice(0, 240)}`, toolCalls: [] };
     }
     const last = [...messages].reverse().find((message) => message.role === 'user');
-    const content = typeof last?.content === 'string' ? last.content : 'your request';
+    const multimodal = Array.isArray(last?.content) ? last.content : [];
+    const content = typeof last?.content === 'string'
+      ? last.content
+      : multimodal.find((item) => item.type === 'text')?.text || 'your request';
+    const hasScreenshot = multimodal.some((item) => item.type === 'image_url');
     const toolRequest = content.match(/^mock tool:\s*([a-z0-9_]+)(?:\s+(\{.*\}))?$/i);
     if (toolRequest) {
       let argumentsValue: Record<string, unknown> = {};
@@ -121,6 +125,12 @@ export class MockModelProvider implements IrisModelProvider {
       return {
         text: `Mock provider requested tool ${toolRequest[1]}.`,
         toolCalls: [{ id: 'mock_tool_call_1', name: toolRequest[1], arguments: argumentsValue }],
+      };
+    }
+    if (hasScreenshot) {
+      return {
+        text: `Mock provider response: I received a screenshot attachment with “${content.slice(0, 240)}”.`,
+        toolCalls: [],
       };
     }
     return {

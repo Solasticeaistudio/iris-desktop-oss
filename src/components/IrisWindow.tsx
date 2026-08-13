@@ -21,6 +21,13 @@ import { IrisParticles, type IrisParticlesRef } from './IrisParticles';
 import { toolRegistry, setAuditContext, clearAuditContext, executeSensitiveTool, executeControlTool } from '../lib/toolRegistry';
 import { ToolBuilderPanel } from './ToolBuilderPanel';
 import type { ProviderToolCall } from '../lib/modelProvider';
+import { isDeterministicMockToolCommand, parseScreenCaptureRequest } from '../lib/interactionRouting';
+
+interface ScreenshotResult {
+  base64: string;
+  width: number;
+  height: number;
+}
 
 // Evaluate the small arithmetic language used by the local calculator intent.
 // Model/user text must never be passed to JavaScript eval or a shell.
@@ -175,9 +182,9 @@ export function IrisWindow() {
       },
       onTakeScreenshot: async () => {
         try {
-          const screenshotData = await invoke<string>('take_screenshot');
-          if (screenshotData) {
-            setScreenshot(screenshotData);
+          const screenshotData = await invoke<ScreenshotResult>('capture_screen_by_index', { index: 0 });
+          if (screenshotData.base64) {
+            setScreenshot(screenshotData.base64);
             console.log('[IRIS] Gesture: Screenshot taken');
           }
         } catch (e) {
@@ -2439,11 +2446,34 @@ export function IrisWindow() {
     setShowSettings(false);
   };
 
+  const captureScreenForChat = useCallback(async (displayIndex = 0) => {
+    setState('thinking');
+    try {
+      const captured = await invoke<ScreenshotResult>('capture_screen_by_index', { index: displayIndex });
+      if (!captured.base64 || captured.width < 1 || captured.height < 1) {
+        throw new Error('Screen capture returned an empty frame');
+      }
+      setScreenshot(captured.base64);
+      addMessage(
+        `Screenshot captured from monitor ${displayIndex + 1} (${captured.width}×${captured.height}). It will be included with your next message.`,
+        'iris',
+      );
+      setState('success');
+    } catch (error) {
+      console.error('[IRIS] Screen capture failed:', error);
+      addMessage(`Screen capture failed: ${String(error)}`, 'iris');
+      setState('error');
+    } finally {
+      window.setTimeout(() => setState('idle'), 500);
+    }
+  }, [addMessage, setScreenshot, setState]);
+
   // Handle sending messages (text input)
   const handleSendMessage = useCallback(
     async (message: string) => {
+      const deterministicMockTool = isDeterministicMockToolCommand(message);
       // Check for webcam vision intent (same as voice handler)
-      const isVisionQuery = checkVisionIntent(message);
+      const isVisionQuery = !deterministicMockTool && checkVisionIntent(message);
       let webcamFrame: string | undefined;
 
       if (isVisionQuery) {
@@ -2530,11 +2560,18 @@ export function IrisWindow() {
             return;
           }
         }
-      } else {
+      } else if (!deterministicMockTool) {
         // Check for local intents BEFORE sending to backend (same as voice commands)
 
         // Provider speed preference toggle
         const lowerMessage = message.toLowerCase();
+
+        const screenCaptureRequest = parseScreenCaptureRequest(message);
+        if (screenCaptureRequest) {
+          addMessage(message, 'user');
+          await captureScreenForChat(screenCaptureRequest.displayIndex);
+          return;
+        }
 
         // Check for macro/gauntlet intent
         const macroTrigger = checkMacroIntent(message);
@@ -2877,6 +2914,10 @@ export function IrisWindow() {
         }
 
         addMessage(message, 'user');
+      } else {
+        // Deterministic smoke-test/provider tool syntax must not be reinterpreted
+        // by calculator, macro, URL, or other local natural-language handlers.
+        addMessage(message, 'user');
       }
 
       setIsLoading(true);
@@ -2937,7 +2978,7 @@ export function IrisWindow() {
         setIsLoading(false);
       }
     },
-    [solstice, screenshot, addMessage, setState, setScreenshot, cleanResponseText, voiceEnabled, webcam, executeProviderTools]
+    [solstice, screenshot, addMessage, setState, setScreenshot, cleanResponseText, voiceEnabled, webcam, executeProviderTools, captureScreenForChat]
   );
 
 
@@ -3154,6 +3195,7 @@ export function IrisWindow() {
           screenshot={screenshot}
           onSendMessage={handleSendMessage}
           onRemoveScreenshot={() => setScreenshot(null)}
+          onCaptureScreen={() => void captureScreenForChat(0)}
           voiceEnabled={voiceEnabled}
           onToggleVoice={() => {
             console.log('[IrisWindow] Toggling voice, current:', voiceEnabled);

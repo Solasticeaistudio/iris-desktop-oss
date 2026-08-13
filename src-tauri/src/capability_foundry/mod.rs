@@ -22,17 +22,23 @@ fn root() -> Result<std::path::PathBuf, String> {
 }
 
 #[cfg(windows)]
+fn local_confirmation_style() -> windows::Win32::UI::WindowsAndMessaging::MESSAGEBOX_STYLE {
+    use windows::Win32::UI::WindowsAndMessaging::{
+        MB_DEFBUTTON2, MB_ICONWARNING, MB_SETFOREGROUND, MB_TOPMOST, MB_YESNO,
+    };
+    MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2 | MB_SETFOREGROUND | MB_TOPMOST
+}
+
+#[cfg(windows)]
 fn local_confirmation(title: &str, message: &str) -> bool {
     use windows::core::HSTRING;
-    use windows::Win32::UI::WindowsAndMessaging::{
-        MessageBoxW, IDYES, MB_DEFBUTTON2, MB_ICONWARNING, MB_YESNO,
-    };
+    use windows::Win32::UI::WindowsAndMessaging::{MessageBoxW, IDYES};
     unsafe {
         MessageBoxW(
             None,
             &HSTRING::from(message),
             &HSTRING::from(title),
-            MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2,
+            local_confirmation_style(),
         ) == IDYES
     }
 }
@@ -293,6 +299,18 @@ pub fn foundry_mcp_info(package_id: String) -> Result<Value, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(windows)]
+    #[test]
+    fn trusted_confirmation_is_forced_above_the_always_on_top_iris_window() {
+        use windows::Win32::UI::WindowsAndMessaging::{
+            MB_DEFBUTTON2, MB_SETFOREGROUND, MB_TOPMOST,
+        };
+        let style = local_confirmation_style();
+        assert_ne!(style.0 & MB_TOPMOST.0, 0);
+        assert_ne!(style.0 & MB_SETFOREGROUND.0, 0);
+        assert_ne!(style.0 & MB_DEFBUTTON2.0, 0);
+    }
 
     #[test]
     fn trusted_install_review_names_exact_final_capabilities_and_hash() {

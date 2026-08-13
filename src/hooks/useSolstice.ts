@@ -29,7 +29,7 @@ function messageContent(text: string, screenshot?: string): ProviderMessage['con
   if (!screenshot) return text;
   return [
     { type: 'text', text },
-    { type: 'image_url', image_url: { url: `data:image/png;base64,${screenshot}` } },
+    { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${screenshot}` } },
   ];
 }
 

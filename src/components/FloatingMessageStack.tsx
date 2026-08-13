@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Loader2, Mic, MicOff, X, ChevronRight } from 'lucide-react';
+import { Send, Loader2, Mic, MicOff, X, ChevronRight, Camera } from 'lucide-react';
 import { cn } from '../lib/utils';
 import type { Message } from '../hooks/useIrisState';
 
@@ -10,6 +10,7 @@ interface FloatingMessageStackProps {
     screenshot: string | null;
     onSendMessage: (message: string) => void;
     onRemoveScreenshot: () => void;
+    onCaptureScreen: () => void;
     voiceEnabled: boolean;
     onToggleVoice: () => void;
     showInput: boolean; // Whether to show the input pill
@@ -24,6 +25,7 @@ export function FloatingMessageStack({
     screenshot,
     onSendMessage,
     onRemoveScreenshot,
+    onCaptureScreen,
     voiceEnabled,
     onToggleVoice,
     showInput,
@@ -222,6 +224,13 @@ export function FloatingMessageStack({
 
                             <div className="flex items-center gap-1 border-l border-white/10 pl-2">
                                 <button
+                                    onClick={onCaptureScreen}
+                                    className="p-2 rounded-full hover:bg-white/10 text-white/40 hover:text-cyan-400 transition-colors"
+                                    title="Capture primary monitor for the next message"
+                                >
+                                    <Camera size={14} />
+                                </button>
+                                <button
                                     onClick={onToggleVoice}
                                     className={cn(
                                         "p-2 rounded-full transition-all",
@@ -280,7 +289,7 @@ export function FloatingMessageStack({
                     >
                         <div className="relative group">
                             <img
-                                src={screenshot || undefined}
+                                src={screenshot ? `data:image/jpeg;base64,${screenshot}` : undefined}
                                 className="w-32 rounded-lg border border-white/20 shadow-lg"
                                 alt="Screenshot"
                             />

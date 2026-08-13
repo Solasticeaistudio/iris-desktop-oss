@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { Check, Copy, Loader2, RefreshCw, Search, ShieldCheck, Trash2, X } from 'lucide-react';
 import { foundryClient } from '../lib/capabilityFoundry/client';
@@ -26,11 +26,12 @@ export function ToolBuilderPanel({ isOpen, onClose }: ToolBuilderPanelProps) {
   const [importText, setImportText] = useState('');
   const [mcp, setMcp] = useState<Record<string, unknown> | null>(null);
   const [driftResult, setDriftResult] = useState<Record<string, unknown> | null>(null);
+  const [dynamicToolCount, setDynamicToolCount] = useState(0);
 
-  const tools = useMemo(() => toolRegistry.list(), [installed, candidate]);
   const refresh = async () => {
     const [packages, events] = await Promise.all([foundryClient.list(), foundryClient.history()]);
-    setInstalled(packages); setHistory(events); await toolRegistry.refresh();
+    const loaded = await toolRegistry.refresh();
+    setInstalled(packages); setHistory(events); setDynamicToolCount(loaded);
   };
 
   useEffect(() => {
@@ -108,7 +109,7 @@ export function ToolBuilderPanel({ isOpen, onClose }: ToolBuilderPanelProps) {
           </div>)}
 
           {tab === 'Installed' && <div className="space-y-3">
-            <div className="flex justify-between"><span className="text-xs text-white/50">{installed.length} installed packages · {tools.filter((tool)=>tool.category==='capability-foundry').length} dynamic tools</span><button onClick={() => act(refresh)} className="text-white/50"><RefreshCw size={14}/></button></div>
+            <div className="flex justify-between"><span className="text-xs text-white/50">{installed.length} installed packages · {dynamicToolCount} dynamic tools</span><button onClick={() => act(refresh)} className="text-white/50"><RefreshCw size={14}/></button></div>
             {!installed.length && <Empty text="No locally reviewed capability packages are installed."/>}
             {installed.map((item) => <article key={item.packageId} className={`rounded-lg border p-4 ${item.tampered?'border-red-500/40 bg-red-500/5':'border-white/10 bg-white/[.03]'}`}><div className="flex items-start justify-between gap-3"><div><div className="font-mono text-xs text-cyan-200">{item.name}</div><div className="mt-1 text-xs text-white/50">{item.origin} · {item.toolCount} tools · {item.driftStatus}</div><div className="mt-1 break-all font-mono text-[10px] text-white/30">{item.contentHash}</div>{item.tampered&&<div className="mt-2 text-xs text-red-300">CAPABILITY_PACKAGE_TAMPERED — disabled</div>}</div><div className="flex gap-2"><button disabled={item.tampered} onClick={() => act(async()=>{await foundryClient.setEnabled(item.packageId,!item.enabled);await refresh();})} className="rounded border border-white/10 px-2 py-1 text-[10px] text-white/60">{item.enabled?'Disable':'Enable'}</button><button onClick={() => act(async()=>{setMcp(await foundryClient.mcpInfo(item.packageId));})} className="rounded border border-white/10 px-2 py-1 text-[10px] text-white/60">MCP</button><button onClick={() => act(async()=>{await foundryClient.uninstall(item.packageId);await refresh();})} className="text-red-300/70"><Trash2 size={14}/></button></div></div></article>)}
             {mcp&&<pre className="rounded border border-indigo-500/20 bg-indigo-500/5 p-3 text-[11px] text-indigo-100">{JSON.stringify(mcp,null,2)}</pre>}
