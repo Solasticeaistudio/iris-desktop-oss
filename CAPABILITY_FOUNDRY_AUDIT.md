@@ -1,5 +1,21 @@
 # IRIS Capability Foundry Audit
 
+## Release-completion update — 2026-08-19
+
+Current-source validation passed: the complete Node suite (63/63), Rust suite
+(69 unit and 6 integration tests), and three consecutive Rust-suite runs after
+test-root isolation repair. The production Windows package build also completed.
+The test-only repair appends an atomic sequence to each time-derived Foundry
+integration-test directory, preventing parallel tests from deleting or reading
+the same package registry.
+
+The authority and execution assumptions documented below remain source-backed:
+declarative-only packages; deterministic IDs/hashes; native install review and
+20-capability bound; private-network grants with DNS revalidation; no automatic
+redirects; exact write-approval binding and single use; credential isolation;
+tamper/drift suspension; and the same installed-package boundary for MCP STDIO.
+No arbitrary-code execution or inbound Foundry listener was introduced.
+
 Audit date: 2026-08-12
 
 Scope: `iris-desktop-oss-foundry` final authority, identity, regression, and source-package validation. This audit supplements `PUBLIC_RELEASE_AUDIT.md`; it does not replace the existing IRIS evidence.

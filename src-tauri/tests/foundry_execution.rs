@@ -7,15 +7,19 @@ use iris_desktop_lib::capability_foundry::{
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
+
+static TEST_ROOT_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 fn root() -> PathBuf {
     std::env::temp_dir().join(format!(
-        "iris-foundry-e2e-{}",
+        "iris-foundry-e2e-{}-{}",
         SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
-            .as_nanos()
+            .as_nanos(),
+        TEST_ROOT_SEQUENCE.fetch_add(1, Ordering::Relaxed),
     ))
 }
 

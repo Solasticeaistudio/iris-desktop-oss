@@ -28,7 +28,7 @@ Clone the public repository and install the exact locked npm dependencies:
 
 ```powershell
 Set-Location C:\dev
-git clone https://github.com/Solasticeaistudio/iris-desktop-oss.git
+git clone https://github.com/solsticeaistudio/iris-desktop-oss.git
 Set-Location .\iris-desktop-oss
 npm ci
 ```

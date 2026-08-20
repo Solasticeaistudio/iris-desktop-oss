@@ -80,7 +80,7 @@ flowchart TD
 Clone the repository and install the exact locked frontend dependencies:
 
 ```bash
-git clone https://github.com/Solasticeaistudio/iris-desktop-oss.git
+git clone https://github.com/solsticeaistudio/iris-desktop-oss.git
 cd iris-desktop-oss
 npm ci
 ```

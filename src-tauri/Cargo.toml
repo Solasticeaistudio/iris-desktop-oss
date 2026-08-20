@@ -4,7 +4,7 @@ version = "0.2.0"
 description = "IRIS - an open-source runtime for AI agents that can see, reason, and act on a computer."
 authors = ["Solstice AI Studio"]
 license = "Apache-2.0"
-repository = ""
+repository = "https://github.com/solsticeaistudio/iris-desktop-oss"
 edition = "2021"
 rust-version = "1.92.0"
 default-run = "iris-desktop"
@@ -37,7 +37,7 @@ dirs = "5.0"
 serde_yaml = "0.9"
 enigo = "0.2"
 uuid = { version = "1.0", features = ["v4"] }
-reqwest = { version = "0.11", features = ["json", "multipart"] }
+reqwest = { version = "0.12", features = ["json", "multipart"] }
 dotenvy = "0.15"
 sha2 = "0.10"
 regex = "=1.12.2"

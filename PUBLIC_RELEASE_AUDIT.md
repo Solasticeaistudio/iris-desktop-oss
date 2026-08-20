@@ -1,5 +1,33 @@
 # Public release audit
 
+## Release-completion audit — 2026-08-19
+
+This is the source-grounded status for the working tree prepared from `main` at
+`3718b92fd19b44251bb62d16efd02a70ff699e30`, before a release commit is made.
+It supersedes older counts, dependency-audit claims, and candidate status where
+they differ.
+
+| Gate | Status | Evidence |
+| --- | --- | --- |
+| Canonical repository namespace | PASS | `origin`, README, getting-started instructions, and Cargo metadata use `https://github.com/solsticeaistudio/iris-desktop-oss`. No old-namespace references remain in the current source tree. |
+| Post-audit natural screen vision | PASS | Current HEAD's routing is covered by the Node suite: a natural screen-vision request captures the requested monitor and submits that freshly captured frame in the same reasoning turn. |
+| Frontend install/build/tests | PASS | `npm ci` recreated MediaPipe 0.10.35 assets; `npm run build` succeeded (2,987 modules); `npm test` passed 63/63. |
+| Frontend lint and dependency audit | PASS | `npm run lint` exited 0 with 81 existing warnings; `npm audit --audit-level=low` reported 0 vulnerabilities. |
+| Rust formatting/tests/Clippy | PASS | Rust 1.92.0: `cargo fmt --check` passed; `cargo test` passed 69 unit plus 6 integration tests, and was repeated three times after fixing test-root isolation; `cargo clippy --all-targets --all-features` exited 0 with 36 existing warnings. |
+| Foundry test isolation | PASS | The Foundry execution integration tests now add a process-local atomic sequence to time-derived temporary roots, preventing parallel-test directory collisions. |
+| Rust dependency audit | PASS | `cargo audit` 0.22.2 reports 0 known vulnerabilities after direct `reqwest` was updated from 0.11.27 to 0.12.28, replacing vulnerable `h2` 0.3.27 with 0.4.17. It reports 17 unmaintained and 3 unsound informational warnings; none is a vulnerability result. |
+| Windows production package | PASS | `npm run tauri:build` completed locally and produced ignored v0.2.0 MSI and NSIS artifacts. |
+| Public boundary, secret, and listener scans | PASS | No credential-shaped values or old GitHub namespace strings found. No application inbound listener/bind implementation found; `TcpListener` usage is limited to local Rust test fixtures. Private-runtime term hits are package names or explicit boundary/removal documentation, not runtime dependencies. |
+| Tauri, approval, and CSP posture | PASS | Generated-command manifest and auxiliary ACL tests pass; direct keyboard/mouse, destructive actions, and provider destination substitution remain absent from renderer IPC. CSP is restrictive and has no `unsafe-eval`; the Node/Rust suites cover approval, session binding, credential, filesystem, clipboard, Foundry, and provider failure-closed paths. |
+| Live Gemini reasoning | PASS | User-owned credential smoke test passed: live reasoning and natural screen vision used a current capture; changed screen content was reflected rather than stale visual context. No credential was recorded in the repository or release evidence. |
+| Live ElevenLabs STT/TTS | PASS | User-owned credential smoke test passed: tap-to-talk transcription, audible TTS response, and interruption/barge-in behavior. No credential was recorded in the repository or release evidence. |
+| Live OpenAI/optional provider | NOT TESTED — OPTIONAL | No user-owned credential was supplied. It is not a v0.2 release gate when the optional provider remains optional. |
+| Exact candidate CI/artifact provenance | MANUAL TEST REQUIRED | CI must run on the eventual release commit and artifacts must be rebuilt from its exact tag. |
+
+The remaining release gates are review of this working-tree diff, a final
+commit, and CI/artifact verification on that exact commit. They are not passed
+by this audit.
+
 ## IRIS OSS v0.2.0 candidate update — 2026-08-13
 
 This section supplements the original hardening record below. It covers the current voice-first interaction, in-app reasoning configuration, secure credential storage, and user-documentation candidate before live provider smoke testing and CI on the final commit.
